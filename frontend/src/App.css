@@ -1,0 +1,497 @@
+/* =========================================================
+   BUDGETBUDDY - MODERN DASHBOARD UI
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f7fb;
+  color: #1f2937;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
+.navbar {
+  width: 100%;
+  min-height: 70px;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  color: white;
+  box-shadow: 0 4px 15px rgba(30, 58, 138, 0.22);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar h2 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.navbar div {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  transition: color 0.2s ease;
+}
+
+.navbar a:hover {
+  color: #bfdbfe;
+}
+
+/* =========================================================
+   MAIN PAGE
+   ========================================================= */
+
+.page {
+  width: 100%;
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 35px 25px 70px;
+}
+
+.page > h1 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.page > p {
+  color: #6b7280;
+  margin-top: 0;
+}
+
+/* =========================================================
+   HEADINGS
+   ========================================================= */
+
+.page h2 {
+  color: #1e3a8a;
+  margin-top: 32px;
+  margin-bottom: 18px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.page h3 {
+  color: #374151;
+  margin-top: 25px;
+  margin-bottom: 12px;
+}
+
+/* =========================================================
+   HORIZONTAL LINES
+   ========================================================= */
+
+.page hr {
+  border: 0;
+  border-top: 1px solid #dbe3ef;
+  margin: 32px 0;
+}
+
+/* =========================================================
+   FORMS
+   ========================================================= */
+
+form {
+  background: white;
+  padding: 26px;
+  border-radius: 16px;
+  box-shadow: 0 5px 20px rgba(30, 58, 138, 0.08);
+  max-width: 650px;
+  margin-bottom: 28px;
+  border: 1px solid #edf2f7;
+}
+
+form div {
+  margin-bottom: 15px;
+}
+
+form label {
+  display: inline-block;
+  min-width: 170px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+input,
+select {
+  width: 250px;
+  padding: 11px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: white;
+  color: #111827;
+  outline: none;
+  font-size: 14px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+input:hover,
+select:hover {
+  border-color: #93c5fd;
+}
+
+input:focus,
+select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+button {
+  border: none;
+  border-radius: 9px;
+  padding: 10px 17px;
+  background: #2563eb;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+button:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.submit-btn {
+  background: #16a34a;
+}
+
+.submit-btn:hover {
+  background: #15803d;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2);
+}
+
+/* =========================================================
+   FINANCIAL SUMMARY
+   ========================================================= */
+
+.page > div:first-of-type {
+  background: white;
+  padding: 26px;
+  border-radius: 18px;
+  box-shadow: 0 5px 20px rgba(30, 58, 138, 0.08);
+  margin-top: 25px;
+  margin-bottom: 28px;
+  border: 1px solid #edf2f7;
+}
+
+.page > div:first-of-type p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+/* =========================================================
+   GENERAL CONTENT
+   ========================================================= */
+
+.page > div {
+  line-height: 1.5;
+}
+
+.page > div > p {
+  margin: 7px 0;
+}
+
+/* =========================================================
+   CHART CONTAINERS
+   ========================================================= */
+
+
+
+.recharts-default-tooltip {
+  border-radius: 10px !important;
+}
+
+.recharts-legend-item-text {
+  color: #374151 !important;
+}
+
+/* =========================================================
+   SAVINGS GOAL PROGRESS
+   ========================================================= */
+
+progress {
+  width: 320px;
+  height: 17px;
+  display: block;
+  margin: 10px 0 15px;
+  border: none;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+  background: #e5e7eb;
+  border-radius: 20px;
+}
+
+progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: 20px;
+}
+
+progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: 20px;
+}
+
+/* =========================================================
+   BUDGET / STATUS TEXT
+   ========================================================= */
+
+.page strong {
+  color: #111827;
+}
+
+/* Positive / completed-looking status text */
+
+.page p {
+  line-height: 1.6;
+}
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+
+.page button {
+  margin-top: 5px;
+}
+
+.page button + button {
+  margin-left: 8px;
+}
+
+/* =========================================================
+   ERROR MESSAGE
+   ========================================================= */
+
+.page p[style*="red"] {
+  background: #fee2e2;
+  color: #b91c1c !important;
+  padding: 13px 16px;
+  border-radius: 10px;
+  border-left: 4px solid #dc2626;
+  margin: 15px 0;
+}
+
+/* =========================================================
+   LINKS
+   ========================================================= */
+
+.page a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.page a:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   DATA LISTS / CARDS
+   ========================================================= */
+
+.page ul {
+  padding-left: 20px;
+}
+
+.page li {
+  margin-bottom: 8px;
+}
+
+/* =========================================================
+   CHART / DATA AREA CARD EFFECT
+   ========================================================= */
+
+.page canvas {
+  max-width: 100%;
+}
+
+/* =========================================================
+   TABLE-LIKE CONTENT
+   ========================================================= */
+
+.page table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(30, 58, 138, 0.07);
+}
+
+.page th {
+  background: #eff6ff;
+  color: #1e3a8a;
+  padding: 12px;
+  text-align: left;
+}
+
+.page td {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* =========================================================
+   HOVER EFFECT FOR CARDS / BLOCKS
+   ========================================================= */
+
+.page > div {
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* =========================================================
+   MOBILE RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 15px 20px;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .navbar div {
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .page {
+    padding: 25px 15px 50px;
+  }
+
+  .page > h1 {
+    font-size: 26px;
+  }
+
+  .page h2 {
+    font-size: 20px;
+  }
+
+  form {
+    width: 100%;
+    max-width: 100%;
+    padding: 20px;
+  }
+
+  form label {
+    display: block;
+    margin-bottom: 7px;
+    min-width: auto;
+  }
+
+  input,
+  select {
+    width: 100%;
+  }
+
+  progress {
+    width: 100%;
+  }
+
+  .page table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .recharts-responsive-container {
+    width: 100% !important;
+  }
+}
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .navbar {
+    min-height: 65px;
+  }
+
+  .navbar h2 {
+    font-size: 20px;
+  }
+
+  .navbar a {
+    font-size: 13px;
+  }
+
+  .navbar div {
+    gap: 10px;
+  }
+
+  .page {
+    padding: 20px 12px 40px;
+  }
+
+  .page > h1 {
+    font-size: 23px;
+  }
+
+  .page h2 {
+    font-size: 19px;
+  }
+
+  .page h3 {
+    font-size: 17px;
+  }
+
+  form {
+    padding: 17px;
+    border-radius: 12px;
+  }
+
+  button {
+    width: auto;
+    padding: 9px 13px;
+  }
+
+  .page button + button {
+    margin-left: 5px;
+  }
+}
