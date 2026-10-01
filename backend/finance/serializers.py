@@ -10,7 +10,36 @@ from .models import (
     Profile
 )
 
+# ==========================
+# PROFILE
+# ==========================
 
+class ProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        source='user.username',
+        read_only=True
+    )
+    email = serializers.EmailField(
+        source='user.email',
+        read_only=True
+    )
+
+    class Meta:
+        model = Profile
+        fields = [
+            'username',
+            'email',
+            'role',
+            'phone_number',
+            'date_of_birth',
+            'created_at'
+        ]
+        read_only_fields = [
+            'username',
+            'email',
+            'role',
+            'created_at'
+        ]
 # ============================================================
 # USER REGISTRATION
 # ============================================================

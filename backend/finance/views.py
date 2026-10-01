@@ -19,6 +19,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
+    Profile,
     Income,
     Expense,
     Budget,
@@ -27,6 +28,7 @@ from .models import (
 )
 
 from .serializers import (
+    ProfileSerializer,
     RegisterSerializer,
     IncomeSerializer,
     ExpenseSerializer,
@@ -35,7 +37,35 @@ from .serializers import (
     NotificationSerializer
 )
 
+# ============================================================
+# PROFILE
+# ============================================================
 
+class ProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        profile = request.user.profile
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        profile = request.user.profile
+
+        serializer = ProfileSerializer(
+            profile,
+            data=request.data,
+            partial=True
+        )
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
 # ============================================================
 # HOME
 # ============================================================
