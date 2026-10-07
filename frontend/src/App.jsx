@@ -26,6 +26,7 @@ import './App.css'
 import Home from './pages/Home'
 import Register from './pages/Register'
 import Login from './pages/Login'
+import Reports from './pages/Reports'
 
 const API_URL = import.meta.env.VITE_API_URL
 
@@ -2504,9 +2505,15 @@ function App() {
             )}
 
             {isLoggedIn && (
-              <Link to="/dashboard">
-                Dashboard
-              </Link>
+              <>
+                <Link to="/dashboard">
+                  Dashboard
+                </Link>
+
+                <Link to="/reports">
+                  Reports
+                </Link>
+              </>
             )}
 
           </div>
@@ -2546,6 +2553,12 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route path="/reports" element={
+                <ProtectedRoute>
+                  <Reports />
+                  </ProtectedRoute>
+              } />
 
             <Route
               path="*"
