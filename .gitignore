@@ -1,0 +1,25 @@
+# Virtual Environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Database
+*.db
+
+# Environment
+.env
+
+# Frontend
+client/node_modules/
+client/dist/
+
+# Generated reports
+report_*.pdf
+report_*.xlsx
+
+# VS Code
+.vscode/
+.pytest_cache/
