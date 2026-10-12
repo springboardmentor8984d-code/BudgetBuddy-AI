@@ -8,3 +8,6 @@ BudgetBuddy/
 backend/db.sqlite3
 backend/*.pdf
 backend/*.xlsx
+
+# Generated Django static files
+backend/staticfiles/
