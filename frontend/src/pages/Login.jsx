@@ -24,11 +24,14 @@ function Login() {
       )
 
       const data = response.data
+      console.log('Login response:', data)
 
       alert('Login successful! 🎉')
 
-      localStorage.setItem('access_token', data.access)
-      localStorage.setItem('refresh_token', data.refresh)
+     localStorage.setItem('access_token', data.access)
+     localStorage.setItem('username', data.username || username.trim())
+     localStorage.setItem('email', data.email || '')
+     localStorage.setItem('refresh_token', data.refresh)
 
       navigate('/dashboard')
     } catch (error) {

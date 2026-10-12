@@ -6,6 +6,7 @@ import {
   Link,
   Navigate,
   useNavigate,
+  useLocation,
 } from 'react-router-dom'
 import axios from 'axios'
 import {
@@ -280,6 +281,44 @@ function MonthlyTooltip({ active, payload, label }) {
 // DASHBOARD
 // ============================================================
 
+function getLoggedInUsername() {
+  const storedUsername =
+    localStorage.getItem('username') ||
+    localStorage.getItem('user_name') ||
+    localStorage.getItem('user')
+
+  if (storedUsername) {
+    return storedUsername
+  }
+
+  const token = localStorage.getItem('access_token')
+
+  if (!token) {
+    return 'User'
+  }
+
+  try {
+    const encodedPayload = token.split('.')[1]
+    const normalizedPayload = encodedPayload
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+
+    const payload = JSON.parse(
+      window.atob(normalizedPayload)
+    )
+
+    return (
+      payload.username ||
+      payload.user_name ||
+      payload.name ||
+      payload.email ||
+      'User'
+    )
+  } catch {
+    return 'User'
+  }
+}
+
 function Dashboard() {
   const navigate = useNavigate()
 
@@ -288,6 +327,8 @@ function Dashboard() {
   )
 
   const [loading, setLoading] = useState(true)
+  const [selectedSection, setSelectedSection] = useState('overview')
+  const username = getLoggedInUsername()
 
   const [dashboard, setDashboard] = useState(null)
 
@@ -296,6 +337,7 @@ function Dashboard() {
   const [incomes, setIncomes] = useState([])
 
   const [budgets, setBudgets] = useState([])
+  const [budgetRecords, setBudgetRecords] = useState([])
 
   const [savingsGoals, setSavingsGoals] =
     useState([])
@@ -331,6 +373,19 @@ function Dashboard() {
     useState({})
 
   const [error, setError] = useState('')
+
+  // UI-only state: keeps the dashboard single-page while allowing
+  // inline forms and the top-right notification panel.
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [showIncomeForm, setShowIncomeForm] = useState(false)
+  const [showSavingsForm, setShowSavingsForm] = useState(false)
+  const [showBudgetForm, setShowBudgetForm] = useState(false)
+  const currentBudgetDate = new Date()
+  const [budgetMonth, setBudgetMonth] = useState(String(currentBudgetDate.getMonth() + 1).padStart(2, '0'))
+  const [budgetYear, setBudgetYear] = useState(String(currentBudgetDate.getFullYear()))
+  const [budgetAmounts, setBudgetAmounts] = useState({})
+  const [budgetSaving, setBudgetSaving] = useState(false)
 
   const token =
     localStorage.getItem('access_token')
@@ -377,6 +432,7 @@ function Dashboard() {
         expenseResponse,
         incomeResponse,
         budgetResponse,
+        budgetRecordsResponse,
         savingsGoalResponse,
         notificationResponse,
       ] = await Promise.all([
@@ -397,6 +453,11 @@ function Dashboard() {
 
         axios.get(
           `${API_URL}/budget-utilization/`,
+          currentAuthConfig
+        ),
+
+        axios.get(
+          `${API_URL}/budgets/`,
           currentAuthConfig
         ),
 
@@ -437,6 +498,14 @@ function Dashboard() {
         )
           ? budgetResponse.data
           : []
+      )
+
+      setBudgetRecords(
+        Array.isArray(budgetRecordsResponse.data)
+          ? budgetRecordsResponse.data
+          : Array.isArray(budgetRecordsResponse.data?.results)
+            ? budgetRecordsResponse.data.results
+            : []
       )
 
       setSavingsGoals(
@@ -597,6 +666,100 @@ function Dashboard() {
         data?.description?.[0] ||
         data?.detail ||
         'Failed to create income.'
+      )
+    }
+  }
+
+
+  // ==========================================================
+  // CREATE MONTHLY BUDGETS
+  // ==========================================================
+
+  const handleBudgetSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+
+    const entries = CATEGORIES
+      .filter((category) => String(budgetAmounts[category] || '').trim() !== '')
+      .map((category) => ({
+        category,
+        amount: Number(budgetAmounts[category]),
+      }))
+
+    if (entries.length === 0) {
+      setError('Enter an amount for at least one category.')
+      return
+    }
+
+    const invalidEntry = entries.find(
+      (entry) => !Number.isFinite(entry.amount) || entry.amount <= 0
+    )
+    if (invalidEntry) {
+      setError(`Enter a valid amount greater than 0 for ${invalidEntry.category}.`)
+      return
+    }
+
+    const monthDate = `${budgetYear}-${budgetMonth}-01`
+    setBudgetSaving(true)
+
+    try {
+      for (const entry of entries) {
+        await axios.post(
+          `${API_URL}/budgets/`,
+          { category: entry.category, amount: entry.amount, month: monthDate },
+          authConfig
+        )
+      }
+
+      setBudgetAmounts({})
+      setShowBudgetForm(false)
+      setMessage('Monthly budget saved successfully!')
+      await loadData()
+    } catch (err) {
+      console.error(err)
+      const data = err.response?.data
+      const detail =
+        data?.non_field_errors?.[0] ||
+        data?.category?.[0] ||
+        data?.amount?.[0] ||
+        data?.month?.[0] ||
+        data?.detail ||
+        (typeof data === 'string' ? data : '')
+
+      const budgetError =
+        detail ||
+        'Could not save all budgets. Some categories may already have a budget for this month. Check your saved budgets before trying again.'
+      await loadData()
+      setError(budgetError)
+    } finally {
+      setBudgetSaving(false)
+    }
+  }
+
+  // ==========================================================
+  // DELETE BUDGET
+  // ==========================================================
+
+  const handleDeleteBudget = async (budgetId) => {
+    if (!budgetId) {
+      setError('Could not find this saved budget record. Refresh the page and try again.')
+      return
+    }
+
+    if (!window.confirm('Delete this category budget? This cannot be undone.')) {
+      return
+    }
+
+    try {
+      setError('')
+      await axios.delete(`${API_URL}/budgets/${budgetId}/`, authConfig)
+      setMessage('Budget deleted successfully.')
+      await loadData()
+    } catch (err) {
+      console.error(err)
+      setError(
+        err.response?.data?.detail ||
+        'Failed to delete this budget. Check that your backend allows DELETE on /budgets/{id}/.'
       )
     }
   }
@@ -894,1551 +1057,773 @@ function Dashboard() {
     )
     
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+
+
+  const unreadNotifications = notifications.filter(
+    (notification) => !notification.is_read
+  ).length
+
+  const savingsPercent = totalIncome > 0
+    ? Math.max(0, Math.min(100, (financialSavings / totalIncome) * 100))
+    : 0
+
+  const categoryClass = (category) => {
+    const value = String(category || '').toLowerCase()
+    if (value.includes('food')) return 'bb-badge-red'
+    if (value.includes('travel')) return 'bb-badge-blue'
+    if (value.includes('shopping')) return 'bb-badge-purple'
+    if (value.includes('education')) return 'bb-badge-green'
+    if (value.includes('entertainment')) return 'bb-badge-yellow'
+    return 'bb-badge-gray'
+  }
+
+  const groupedBudgets = budgets.reduce((groups, budget) => {
+    const monthKey = getMonthKey(budget.month) || 'Unknown month'
+    if (!groups[monthKey]) groups[monthKey] = []
+    groups[monthKey].push(budget)
+    return groups
+  }, {})
+
+  const sortedBudgetMonths = Object.keys(groupedBudgets)
+    .filter((monthKey) => monthKey !== 'Unknown month')
+    .sort((a, b) => b.localeCompare(a))
 
   return (
-    <div className="page">
-
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
-
-      <h1>
-        Welcome to BudgetBuddy 🎉
-      </h1>
-
-      <p>
-        You are successfully logged in!
-      </p>
-
-      <p>
-        {message}
-      </p>
-
-
-      {/* ======================================================
-          LOADING STATE
-      ====================================================== */}
-
-      {loading && (
-        <div
-          style={{
-            padding: '15px',
-            marginBottom: '20px',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            background: '#f5f5f5',
-          }}
-        >
-          <strong>
-            Loading your financial data...
-          </strong>
-        </div>
-      )}
-
-
-      {/* ======================================================
-          ERROR STATE
-      ====================================================== */}
-
-      {error && (
-        <div
-          style={{
-            padding: '15px',
-            marginBottom: '20px',
-            border: '1px solid #ff6b6b',
-            borderRadius: '8px',
-            background: '#ffecec',
-            color: '#b00020',
-          }}
-        >
-          <strong>
-            Error:
-          </strong>{' '}
-          {error}
-        </div>
-      )}
-
-
-      {/* ======================================================
-          ANALYTICS DASHBOARD
-      ====================================================== */}
-
-      <hr />
-
-      <h2>
-        📊 Analytics Dashboard
-      </h2>
-
-      <p>
-        Real-time financial information
-        from your BudgetBuddy account.
-      </p>
-
-
-      {/* ======================================================
-          SUMMARY CARDS
-      ====================================================== */}
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns:
-            'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '15px',
-          marginBottom: '25px',
-        }}
-      >
-
-        {/* TOTAL INCOME */}
-
-        <div
-          style={{
-            padding: '20px',
-            borderRadius: '10px',
-            border: '1px solid #ccc',
-            background: '#f0fff4',
-          }}
-        >
-          <h3>
-            💰 Total Income
-          </h3>
-
-          <h2>
-            ₹{formatAmount(totalIncome)}
-          </h2>
-
-          <p>
-            Total income recorded
-            for your account.
-          </p>
-        </div>
-
-
-        {/* TOTAL EXPENSES */}
-
-        <div
-          style={{
-            padding: '20px',
-            borderRadius: '10px',
-            border: '1px solid #ccc',
-            background: '#fff5f5',
-          }}
-        >
-          <h3>
-            💸 Total Expenses
-          </h3>
-
-          <h2>
-            ₹{formatAmount(totalExpenses)}
-          </h2>
-
-          <p>
-            Total expenses recorded
-            for your account.
-          </p>
-        </div>
-
-
-        {/* SAVINGS */}
-
-        <div
-          style={{
-            padding: '20px',
-            borderRadius: '10px',
-            border: '1px solid #ccc',
-            background: '#f5f5ff',
-          }}
-        >
-          <h3>
-            💵 Financial Balance
-          </h3>
-
-          <h2>
-            ₹{formatAmount(financialSavings)}
-          </h2>
-
-          <p>
-            Income minus expenses.
-          </p>
-        </div>
-
-
-        {/* TRANSACTION COUNT */}
-
-        <div
-          style={{
-            padding: '20px',
-            borderRadius: '10px',
-            border: '1px solid #ccc',
-            background: '#fffdf0',
-          }}
-        >
-          <h3>
-            🧾 Transactions
-          </h3>
-
-          <h2>
-            {incomes.length +
-              expenses.length}
-          </h2>
-
-          <p>
-            Income and expense records.
-          </p>
-        </div>
-
-      </div>
-
-
-      {/* ======================================================
-          FINANCIAL SUMMARY
-      ====================================================== */}
-
-      <div
-        style={{
-          padding: '20px',
-          marginBottom: '25px',
-          border: '1px solid #ccc',
-          borderRadius: '10px',
-        }}
-      >
-
-        <h2>
-          📋 Financial Summary
-        </h2>
-
-        <p>
-          <strong>
-            Total Income:
-          </strong>{' '}
-          ₹{formatAmount(totalIncome)}
-        </p>
-
-        <p>
-          <strong>
-            Total Expenses:
-          </strong>{' '}
-          ₹{formatAmount(totalExpenses)}
-        </p>
-
-        <p>
-          <strong>
-            Savings / Balance:
-          </strong>{' '}
-          ₹{formatAmount(financialSavings)}
-        </p>
-
-        <p>
-          <strong>
-            Savings Rate:
-          </strong>{' '}
-
-          {totalIncome > 0
-            ? `${(
-                (financialSavings /
-                  totalIncome) *
-                100
-              ).toFixed(2)}%`
-            : '0.00%'}
-        </p>
-
-        <p>
-          <strong>
-            Income Records:
-          </strong>{' '}
-          {incomes.length}
-        </p>
-
-        <p>
-          <strong>
-            Expense Records:
-          </strong>{' '}
-          {expenses.length}
-        </p>
-
-        <p>
-          <strong>
-            Savings Goals:
-          </strong>{' '}
-          {savingsGoals.length}
-        </p>
-
-        <p>
-          <strong>
-            Notifications:
-          </strong>{' '}
-          {notifications.length}
-        </p>
-
-      </div>
-
-
-      {/* ======================================================
-          CATEGORY-WISE SPENDING - PIE CHART
-      ====================================================== */}
-
-      <div
-        style={{
-          padding: '20px',
-          marginBottom: '25px',
-          border: '1px solid #ccc',
-          borderRadius: '10px',
-        }}
-      >
-
-        <h2>
-          🛒 Category-wise Spending
-        </h2>
-
-        {categoryChartData.length === 0 ? (
-
-          <p>
-            No expense data available.
-          </p>
-
-        ) : (
-
-          <>
-
-           <div
-            style={{
-              width: '100%',
-              height: '380px',
-            }}
-          >
-            <ResponsiveContainer
-              width="100%"
-              height={380}
-           >
-
-                <PieChart>
-
-                  <Pie
-                    data={
-                      categoryChartData
-                    }
-                    dataKey="amount"
-                    nameKey="category"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={125}
-                    innerRadius={65}
-                    paddingAngle={2}
-                    label={({ category, percentage }) =>
-                      `${category} ${percentage.toFixed(1)}%`
-                    }
-                  >
-
-                    {categoryChartData.map(
-                      (entry, index) => (
-                        <Cell
-                          key={
-                            entry.category
-                          }
-                          fill={
-                            CHART_COLORS[
-                              index %
-                                CHART_COLORS.length
-                            ]
-                          }
-                        />
-                      )
-                    )}
-
-                  </Pie>
-
-                  <Tooltip
-                    content={
-                      <CategoryTooltip />
-                    }
-                  />
-
-                  <Legend />
-
-                </PieChart>
-
-              </ResponsiveContainer>
-            </div>
-
-            <div
-              style={{
-                marginTop: '10px',
-                textAlign: 'center',
-              }}
-            >
-              <strong>
-                Total Spending:
-              </strong>{' '}
-              ₹
-              {formatAmount(
-                totalCategoryExpenses
-              )}
-            </div>
-
-          </>
-        )}
-
-      </div>
-
-
-      {/* ======================================================
-          MONTHLY INCOME / EXPENSE - BAR CHART
-      ====================================================== */}
-
-      <div
-        style={{
-          padding: '20px',
-          marginBottom: '25px',
-          border: '1px solid #ccc',
-          borderRadius: '10px',
-        }}
-      >
-
-        <h2>
-          📈 Monthly Income / Expense Trends
-        </h2>
-
-        {monthlyChartData.length === 0 ? (
-
-          <p>
-            No monthly transaction data
-            available.
-          </p>
-
-        ) : (
-
-          <>
-
-           <div
-            style={{
-              width: '100%',
-              height: '400px',
-            }}
-          >
-
-            <ResponsiveContainer
-              width="100%"
-              height={400}
-             >
-
-                <BarChart
-                  data={
-                    monthlyChartData
-                  }
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 20,
-                  }}
-                >
-
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                  />
-
-                  <XAxis
-                    dataKey="monthLabel"
-                  />
-
-                  <YAxis
-                    tickFormatter={(value) =>
-                      `₹${value}`
-                    }
-                  />
-
-                  <Tooltip
-                    content={
-                      <MonthlyTooltip />
-                    }
-                  />
-
-                  <Legend />
-
-                  <Bar
-                    dataKey="income"
-                    name="Income"
-                    fill="#16a34a"
-                    radius={[
-                      5,
-                      5,
-                      0,
-                      0,
-                    ]}
-                  />
-
-                  <Bar
-                    dataKey="expenses"
-                    name="Expenses"
-                    fill="#dc2626"
-                    radius={[
-                      5,
-                      5,
-                      0,
-                      0,
-                    ]}
-                  />
-
-                </BarChart>
-
-              </ResponsiveContainer>
-
-            </div>
-
-            <p
-              style={{
-                textAlign: 'center',
-                marginTop: '10px',
-              }}
-            >
-              Green = Income &nbsp; | &nbsp;
-              Red = Expenses
-            </p>
-
-          </>
-        )}
-
-      </div>
-
-
-      {/* ======================================================
-          SAVINGS PROGRESS ANALYTICS
-      ====================================================== */}
-
-      <div
-        style={{
-          padding: '20px',
-          marginBottom: '25px',
-          border: '1px solid #ccc',
-          borderRadius: '10px',
-        }}
-      >
-
-        <h2>
-          🎯 Savings Progress
-        </h2>
-
-        {savingsGoals.length === 0 ? (
-
-          <p>
-            No savings goals available.
-          </p>
-
-        ) : (
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns:
-                'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '15px',
-            }}
-          >
-
-            {savingsGoals.map(
-              (goal) => {
-
-                const progress =
-                  Math.min(
-                    100,
-                    Math.max(
-                      0,
-                      Number(
-                        goal.progress_percentage ||
-                        0
-                      )
-                    )
-                  )
-
-                return (
-                  <div
-                    key={goal.id}
-                    style={{
-                      padding:
-                        '15px',
-                      border:
-                        '1px solid #ddd',
-                      borderRadius:
-                        '10px',
-                    }}
-                  >
-
-                    <h3>
-                      {goal.goal_name}
-                    </h3>
-
-                    <p>
-                      <strong>
-                        Target:
-                      </strong>{' '}
-                      ₹
-                      {formatAmount(
-                        goal.target_amount
-                      )}
-                    </p>
-
-                    <p>
-                      <strong>
-                        Saved:
-                      </strong>{' '}
-                      ₹
-                      {formatAmount(
-                        goal.current_amount
-                      )}
-                    </p>
-
-                    <p>
-                      <strong>
-                        Progress:
-                      </strong>{' '}
-                      {progress.toFixed(
-                        2
-                      )}
-                      %
-                    </p>
-
-                    <div
-                      style={{
-                        width:
-                          '100%',
-                        height:
-                          '20px',
-                        background:
-                          '#eeeeee',
-                        borderRadius:
-                          '10px',
-                        overflow:
-                          'hidden',
-                        marginBottom:
-                          '10px',
-                      }}
-                    >
-
-                      <div
-                        style={{
-                          width:
-                            `${progress}%`,
-                          height:
-                            '100%',
-                          background:
-                            progress >=
-                            100
-                              ? '#16a34a'
-                              : '#2563eb',
-                          borderRadius:
-                            '10px',
-                          transition:
-                            'width 0.5s ease',
-                        }}
-                      />
-
-                    </div>
-
-                    <p>
-                      <strong>
-                        Status:
-                      </strong>{' '}
-                      {goal.status}
-                    </p>
-
-                  </div>
-                )
-              }
-            )}
-
+    <>
+      <style>{`
+        * { box-sizing: border-box; }
+        html, body, #root { margin:0; min-height:100%; background:#080D1C; }
+        body { font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+
+        .bb-layout{
+          height:100vh;
+          width:100%;
+          display:flex;
+          overflow:hidden;
+          background:#080D1C;
+          color:#E5E7EB;
+        }
+        .bb-sidebar{
+          width:228px;
+          flex:0 0 228px;
+          height:100vh;
+          position:fixed;
+          left:0; top:0; bottom:0;
+          display:flex;
+          flex-direction:column;
+          padding:18px 12px 14px;
+          background:#0C1324;
+          border-right:1px solid #27314A;
+          z-index:50;
+        }
+        .bb-brand{
+          display:flex;
+          align-items:center;
+          gap:10px;
+          padding:4px 9px 20px;
+        }
+        .bb-logo{
+          width:30px;height:30px;border-radius:8px;
+          display:grid;place-items:center;
+          background:#7C3AED;color:white;font-size:15px;
+          box-shadow:0 8px 20px rgba(124,58,237,.25);
+        }
+        .bb-brand strong{display:block;font-size:13px;color:#F8FAFC}
+        .bb-brand span{display:block;margin-top:2px;font-size:9px;color:#64748B}
+        .bb-menu-title{
+          margin:4px 10px 8px;
+          font-size:9px;font-weight:700;letter-spacing:.12em;color:#475569;
+        }
+        .bb-nav{display:flex;flex-direction:column;gap:4px}
+        .bb-nav button{
+          width:100%;height:37px;border:0;border-radius:8px;
+          display:flex;align-items:center;gap:10px;
+          padding:0 11px;background:transparent;color:#94A3B8;
+          font-size:11px;text-align:left;cursor:pointer;
+          transition:.15s ease;
+        }
+        .bb-nav button:hover{background:#151E33;color:#E5E7EB}
+        .bb-nav button.active{
+          color:#fff;background:rgba(124,58,237,.18);
+          box-shadow:inset 3px 0 0 #7C3AED;
+        }
+        .bb-nav-icon{width:16px;text-align:center;color:#8B5CF6;font-size:14px}
+        .bb-sidebar-bottom{margin-top:auto}
+        .bb-profile{
+          display:flex;align-items:center;gap:9px;
+          padding:10px;border:1px solid #27314A;border-radius:9px;
+          background:#11192D;margin-bottom:8px;
+        }
+        .bb-avatar{
+          width:28px;height:28px;border-radius:50%;
+          display:grid;place-items:center;background:#7C3AED;color:#fff;
+          font-size:11px;font-weight:700;
+        }
+        .bb-profile strong{display:block;font-size:10px;color:#E5E7EB;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .bb-profile span{display:block;font-size:8px;color:#64748B;margin-top:2px}
+        .bb-signout{
+          width:100%;height:34px;border:1px solid #27314A;border-radius:8px;
+          background:transparent;color:#94A3B8;cursor:pointer;font-size:10px;
+        }
+        .bb-signout:hover{background:#171F35;color:#fff}
+
+        .bb-main{
+          margin-left:228px;width:calc(100% - 228px);
+          height:100vh;overflow:hidden;background:#080D1C;
+        }
+        .bb-scroll{
+          height:100%;overflow-y:auto;overflow-x:hidden;
+          padding:22px 25px 28px;
+          scrollbar-color:#27314A #080D1C;
+        }
+        .bb-header{
+          min-height:52px;display:flex;align-items:center;justify-content:space-between;
+          gap:16px;border-bottom:1px solid #27314A;padding-bottom:13px;margin-bottom:14px;
+        }
+        .bb-header h1{margin:0;font-size:19px;line-height:1.2;color:#F8FAFC}
+        .bb-header p{margin:4px 0 0;font-size:10px;color:#64748B}
+        .bb-header-right{position:relative;display:flex;align-items:center;gap:9px}
+        .bb-bell{
+          position:relative;width:34px;height:34px;border-radius:8px;
+          border:1px solid #27314A;background:#11192D;color:#E5E7EB;
+          cursor:pointer;font-size:15px;
+        }
+        .bb-bell:hover{border-color:#7C3AED;background:#171F35}
+        .bb-count{
+          position:absolute;right:-4px;top:-5px;min-width:15px;height:15px;
+          padding:0 4px;border-radius:20px;background:#EF4444;color:#fff;
+          font-size:8px;display:grid;place-items:center;border:2px solid #080D1C;
+        }
+        .bb-user-chip{
+          padding:8px 10px;border:1px solid #27314A;border-radius:8px;
+          background:#11192D;color:#CBD5E1;font-size:10px;
+        }
+        .bb-notification-pop{
+          position:absolute;right:0;top:42px;width:320px;max-height:390px;overflow:auto;
+          padding:10px;background:#11192D;border:1px solid #27314A;border-radius:10px;
+          box-shadow:0 18px 50px rgba(0,0,0,.45);z-index:100;
+        }
+        .bb-notification-pop h3{margin:2px 2px 8px;font-size:12px;color:#F8FAFC}
+        .bb-notification{
+          padding:9px;border:1px solid #27314A;border-radius:7px;background:#171F35;margin-bottom:7px;
+        }
+        .bb-notification strong{display:block;font-size:10px;color:#E5E7EB}
+        .bb-notification p{margin:4px 0;font-size:9px;line-height:1.4;color:#94A3B8}
+        .bb-notification small{color:#64748B;font-size:8px}
+        .bb-read{margin-top:5px;padding:4px 7px;border:0;border-radius:5px;background:#7C3AED;color:white;font-size:8px;cursor:pointer}
+
+        .bb-message{margin:0 0 10px;font-size:9px;color:#64748B}
+        .bb-error{padding:9px 11px;margin-bottom:11px;border:1px solid rgba(239,68,68,.35);border-radius:8px;background:rgba(239,68,68,.08);color:#FCA5A5;font-size:10px}
+        .bb-grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+        .bb-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+        .bb-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .bb-card{
+          background:#171F35;border:1px solid #27314A;border-radius:10px;
+          box-shadow:0 8px 24px rgba(0,0,0,.14);
+        }
+        .bb-stat{position:relative;padding:13px 14px;min-height:94px;overflow:hidden}
+        .bb-stat:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:#7C3AED}
+        .bb-stat.green:before{background:#10B981}.bb-stat.red:before{background:#EF4444}
+        .bb-stat.yellow:before{background:#F59E0B}.bb-stat.purple:before{background:#8B5CF6}
+        .bb-label{font-size:8px;letter-spacing:.1em;color:#64748B;font-weight:700}
+        .bb-value{display:block;margin-top:9px;font-size:19px;font-weight:700;color:#F8FAFC}
+        .bb-sub{display:block;margin-top:3px;font-size:8px;color:#64748B}
+        .bb-panel{padding:14px}
+        .bb-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+        .bb-panel-head h2{margin:0;font-size:13px;color:#F8FAFC}
+        .bb-panel-head span{font-size:9px;color:#64748B}
+        .bb-btn{
+          border:0;border-radius:6px;padding:7px 10px;background:#7C3AED;color:#fff;
+          font-size:9px;font-weight:600;cursor:pointer;
+        }
+        .bb-btn:hover{background:#8B5CF6}
+        .bb-btn.secondary{background:#0C1324;border:1px solid #27314A;color:#CBD5E1}
+        .bb-btn.danger{background:rgba(239,68,68,.13);color:#FCA5A5;border:1px solid rgba(239,68,68,.25)}
+        .bb-list{display:flex;flex-direction:column}
+        .bb-row{
+          display:flex;align-items:center;justify-content:space-between;gap:10px;
+          padding:9px 0;border-bottom:1px solid #27314A;
+        }
+        .bb-row:last-child{border-bottom:0}
+        .bb-row-main{min-width:0}
+        .bb-row-main strong{display:block;font-size:10px;color:#E5E7EB}
+        .bb-row-main span{display:block;margin-top:3px;font-size:8px;color:#64748B}
+        .bb-positive{color:#10B981;font-size:10px;font-weight:700}.bb-negative{color:#EF4444;font-size:10px;font-weight:700}
+        .bb-empty{padding:15px 0;color:#64748B;font-size:10px}
+        .bb-badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:8px;font-weight:700}
+        .bb-badge-red{background:rgba(239,68,68,.13);color:#FCA5A5}.bb-badge-blue{background:rgba(59,130,246,.13);color:#93C5FD}
+        .bb-badge-purple{background:rgba(124,58,237,.16);color:#C4B5FD}.bb-badge-green{background:rgba(16,185,129,.13);color:#6EE7B7}
+        .bb-badge-yellow{background:rgba(245,158,11,.13);color:#FCD34D}.bb-badge-gray{background:#0C1324;color:#94A3B8}
+        .bb-form{
+          margin-top:10px;padding:12px;border:1px solid #27314A;border-radius:9px;background:#11192D;
+        }
+        .bb-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+        .bb-field label{display:block;margin-bottom:4px;font-size:8px;color:#94A3B8}
+        .bb-field input,.bb-field select,.bb-field textarea{
+          width:100%;height:32px;padding:0 8px;border:1px solid #27314A;border-radius:6px;
+          background:#0C1324;color:#E5E7EB;font-size:9px;outline:none;
+        }
+        .bb-field textarea{height:60px;padding-top:7px;resize:vertical}
+        .bb-field input:focus,.bb-field select:focus,.bb-field textarea:focus{border-color:#7C3AED}
+        .bb-form-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:10px}
+        .bb-progress{height:6px;border-radius:99px;background:#0C1324;overflow:hidden;margin:8px 0}
+        .bb-progress > div{height:100%;border-radius:99px;background:#7C3AED}
+        .bb-goal{padding:12px}.bb-goal h3{margin:0;font-size:11px;color:#F8FAFC}
+        .bb-goal-meta{display:flex;justify-content:space-between;margin-top:7px;font-size:8px;color:#94A3B8}
+        .bb-goal-actions{display:flex;gap:6px;margin-top:8px}
+        .bb-goal-actions input{flex:1;height:28px;padding:0 7px;background:#0C1324;border:1px solid #27314A;border-radius:6px;color:#E5E7EB;font-size:9px}
+        .bb-table-row{display:grid;grid-template-columns:1.2fr 1.5fr .8fr .8fr auto;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #27314A}
+        .bb-table-row:last-child{border-bottom:0}
+        .bb-table-row span,.bb-table-row strong{font-size:9px;color:#CBD5E1}
+        .bb-table-row .amount{font-size:10px;font-weight:700;color:#E5E7EB;text-align:right}
+        .bb-chart-card{padding:12px}
+        .bb-chart-card h3{margin:0 0 8px;font-size:11px;color:#F8FAFC}
+        .bb-chart-wrap{height:230px}
+        .bb-small-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+        .bb-mini{padding:10px;border:1px solid #27314A;border-radius:8px;background:#11192D}
+        .bb-mini span{font-size:8px;color:#64748B}.bb-mini strong{display:block;margin-top:5px;font-size:12px;color:#E5E7EB}
+        .bb-budget-card{padding:13px}
+        .bb-budget-card h3{margin:0;font-size:11px;color:#F8FAFC}
+        .bb-budget-card .budget-amount{margin-top:8px;font-size:16px;font-weight:700;color:#E5E7EB}
+        .bb-budget-item{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #27314A;font-size:8px;color:#94A3B8}
+        .bb-budget-item:last-child{border-bottom:0}
+        .bb-notice{padding:9px;border:1px dashed #27314A;border-radius:7px;background:#11192D;color:#64748B;font-size:9px}
+        .bb-refresh{display:flex;justify-content:flex-end;margin-top:12px}
+
+        @media(max-width:1000px){
+          .bb-grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .bb-small-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+        }
+        @media(max-width:760px){
+          .bb-sidebar{width:190px;flex-basis:190px}
+          .bb-main{margin-left:190px;width:calc(100% - 190px)}
+          .bb-grid-2,.bb-grid-3{grid-template-columns:1fr}
+          .bb-table-row{grid-template-columns:1fr 1fr auto}
+          .bb-table-row .hide-mobile{display:none}
+        }
+      `}</style>
+
+      <div className="bb-layout">
+        <aside className="bb-sidebar">
+          <div className="bb-brand">
+            <div className="bb-logo">₹</div>
+            <div><strong>BudgetBuddy</strong><span>Personal Finance Manager</span></div>
           </div>
-        )}
 
-      </div>
-
-
-      {/* ======================================================
-          CREATE EXPENSE
-      ====================================================== */}
-
-      <hr />
-
-      <h2>
-        💸 Add Expense
-      </h2>
-
-      <form
-        onSubmit={
-          handleExpenseSubmit
-        }
-      >
-
-        <div>
-
-          <label>
-            Category:{' '}
-          </label>
-
-          <select
-            value={
-              expenseForm.category
-            }
-            onChange={(e) =>
-              setExpenseForm({
-                ...expenseForm,
-                category:
-                  e.target.value,
-              })
-            }
-          >
-
-            {CATEGORIES.map(
-              (category) => (
-                <option
-                  key={category}
-                  value={category}
-                >
-                  {category}
-                </option>
-              )
-            )}
-
-          </select>
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Amount:{' '}
-          </label>
-
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={
-              expenseForm.amount
-            }
-            onChange={(e) =>
-              setExpenseForm({
-                ...expenseForm,
-                amount:
-                  e.target.value,
-              })
-            }
-            required
-          />
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Date:{' '}
-          </label>
-
-          <input
-            type="date"
-            value={
-              expenseForm.date
-            }
-            onChange={(e) =>
-              setExpenseForm({
-                ...expenseForm,
-                date:
-                  e.target.value,
-              })
-            }
-            required
-          />
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Description:{' '}
-          </label>
-
-          <input
-            type="text"
-            value={
-              expenseForm.description
-            }
-            onChange={(e) =>
-              setExpenseForm({
-                ...expenseForm,
-                description:
-                  e.target.value,
-              })
-            }
-          />
-
-        </div>
-
-        <br />
-
-        <button
-          className="submit-btn"
-          type="submit"
-        >
-          Add Expense
-        </button>
-
-      </form>
-
-
-      {/* ======================================================
-          EXPENSE LIST
-      ====================================================== */}
-
-      <hr />
-
-      <h2>
-        💸 Expenses
-      </h2>
-
-      {expenses.length === 0 ? (
-
-        <p>
-          No expenses found.
-        </p>
-
-      ) : (
-
-        expenses.map(
-          (expense) => (
-
-            <div
-              key={expense.id}
-            >
-
-              <p>
-
-                <strong>
-                  {expense.category}
-                </strong>
-
-                {' - '}
-
-                ₹
-                {expense.amount}
-
-                {' - '}
-
-                {expense.date}
-
-              </p>
-
-              <p>
-                {expense.description}
-              </p>
-
+          <div className="bb-menu-title">MAIN MENU</div>
+          <nav className="bb-nav">
+            {[
+              ['overview','▦','Overview'],
+              ['budgets','▤','Budgets'],
+              ['savings','◎','Savings'],
+              ['income','↗','Income'],
+              ['expenses','↘','Expenses'],
+              ['analytics','◌','Analytics'],
+              ['reports','▣','Reports'],
+            ].map(([key,icon,label]) => (
               <button
-                onClick={() =>
-                  handleDeleteExpense(
-                    expense.id
-                  )
-                }
+                key={key}
+                className={selectedSection === key ? 'active' : ''}
+                onClick={() => {
+                  setSelectedSection(key)
+                  setNotificationsOpen(false)
+                }}
               >
-                Delete
+                <span className="bb-nav-icon">{icon}</span>{label}
               </button>
-
-              <hr />
-
-            </div>
-
-          )
-        )
-
-      )}
-
-
-      {/* ======================================================
-          CREATE INCOME
-      ====================================================== */}
-
-      <h2>
-        💰 Add Income
-      </h2>
-
-      <form
-        onSubmit={
-          handleIncomeSubmit
-        }
-      >
-
-        <div>
-
-          <label>
-            Source:{' '}
-          </label>
-
-          <input
-            type="text"
-            value={
-              incomeForm.source
-            }
-            onChange={(e) =>
-              setIncomeForm({
-                ...incomeForm,
-                source:
-                  e.target.value,
-              })
-            }
-            required
-          />
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Amount:{' '}
-          </label>
-
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={
-              incomeForm.amount
-            }
-            onChange={(e) =>
-              setIncomeForm({
-                ...incomeForm,
-                amount:
-                  e.target.value,
-              })
-            }
-            required
-          />
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Date:{' '}
-          </label>
-
-          <input
-            type="date"
-            value={
-              incomeForm.date
-            }
-            onChange={(e) =>
-              setIncomeForm({
-                ...incomeForm,
-                date:
-                  e.target.value,
-              })
-            }
-            required
-          />
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Description:{' '}
-          </label>
-
-          <input
-            type="text"
-            value={
-              incomeForm.description
-            }
-            onChange={(e) =>
-              setIncomeForm({
-                ...incomeForm,
-                description:
-                  e.target.value,
-              })
-            }
-          />
-
-        </div>
-
-        <br />
-
-        <button
-          className="submit-btn"
-          type="submit"
-        >
-          Add Income
-        </button>
-
-      </form>
-
-
-      {/* ======================================================
-          INCOME LIST
-      ====================================================== */}
-
-      <hr />
-
-      <h2>
-        💰 Income Records
-      </h2>
-
-      {incomes.length === 0 ? (
-
-        <p>
-          No income records found.
-        </p>
-
-      ) : (
-
-        incomes.map(
-          (income) => (
-
-            <div
-              key={income.id}
-            >
-
-              <p>
-
-                <strong>
-                  {income.source}
-                </strong>
-
-                {' - '}
-
-                ₹
-                {income.amount}
-
-                {' - '}
-
-                {income.date}
-
-              </p>
-
-              <p>
-                {income.description}
-              </p>
-
-              <hr />
-
-            </div>
-
-          )
-        )
-
-      )}
-
-
-      {/* ======================================================
-          BUDGET UTILIZATION
-      ====================================================== */}
-
-      <h2>
-        📊 Budget Utilization
-      </h2>
-
-      {budgets.length === 0 ? (
-
-        <p>
-          No budgets found.
-        </p>
-
-      ) : (
-
-        budgets.map(
-          (budget, index) => (
-
-            <div
-              key={index}
-            >
-
-              <p>
-
-                <strong>
-                  {budget.category}
-                </strong>
-
-              </p>
-
-              <p>
-                Budget: ₹
-                {budget.budget_amount}
-              </p>
-
-              <p>
-                Spent: ₹
-                {budget.spent_amount}
-              </p>
-
-              <p>
-                Remaining: ₹
-                {budget.remaining_amount}
-              </p>
-
-              <p>
-                Status:{' '}
-                {budget.status}
-              </p>
-
-              <hr />
-
-            </div>
-
-          )
-        )
-
-      )}
-
-
-      {/* ======================================================
-          NOTIFICATIONS
-      ====================================================== */}
-
-      <hr />
-
-      <h2>
-        🔔 Notifications
-      </h2>
-
-      {notifications.length === 0 ? (
-
-        <p>
-          No notifications found.
-        </p>
-
-      ) : (
-
-        notifications.map(
-          (notification) => (
-
-            <div
-              key={
-                notification.id
-              }
-            >
-
-              <p>
-
-                <strong>
-                  {
-                    notification.notification_type
-                  }
-                </strong>
-
-              </p>
-
-              <p>
-                {
-                  notification.message
-                }
-              </p>
-
-              {notification.is_read ? (
-
+            ))}
+          </nav>
+
+<div className="bb-sidebar-bottom">
+  <div className="bb-profile">
+    <div className="bb-avatar">
+      {String(username || 'U').charAt(0).toUpperCase()}
+    </div>
+
+    <div>
+      <strong>{username || 'User'}</strong>
+      <span>{localStorage.getItem('email') || 'No email available'}</span>
+    </div>
+  </div>
+
+  <button className="bb-signout" onClick={handleLogout}>
+    ⇥ &nbsp; Sign Out
+  </button>
+</div>
+</aside>
+
+        <main className="bb-main">
+          <div className="bb-scroll">
+            <header className="bb-header">
+              <div>
+                <h1>
+                  {selectedSection === 'overview' && 'Overview'}
+                  {selectedSection === 'budgets' && 'Budgets'}
+                  {selectedSection === 'savings' && 'Savings'}
+                  {selectedSection === 'income' && 'Income'}
+                  {selectedSection === 'expenses' && 'Expenses'}
+                  {selectedSection === 'analytics' && 'Analytics'}
+                  {selectedSection === 'reports' && 'Reports'}
+                </h1>
                 <p>
-                  ✅ Read
+                  {selectedSection === 'overview' && 'Your financial overview at a glance.'}
+                  {selectedSection === 'budgets' && 'Track your monthly budgets and spending limits.'}
+                  {selectedSection === 'savings' && 'Manage your savings goals and progress.'}
+                  {selectedSection === 'income' && 'Review and manage your income records.'}
+                  {selectedSection === 'expenses' && 'Review and manage your expenses.'}
+                  {selectedSection === 'analytics' && 'Understand your spending and financial trends.'}
+                  {selectedSection === 'reports' && 'View and export your monthly financial reports.'}
                 </p>
+              </div>
 
-              ) : (
-
-                <button
-                  onClick={() =>
-                    handleMarkNotificationRead(
-                      notification.id
-                    )
-                  }
-                >
-                  Mark as Read
+              <div className="bb-header-right">
+                <div className="bb-user-chip">● {username || 'User'}</div>
+                <button className="bb-bell" onClick={() => setNotificationsOpen(v => !v)} aria-label="Notifications">
+                  🔔
+                  {unreadNotifications > 0 && <span className="bb-count">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
                 </button>
 
-              )}
-
-              <p>
-                {
-                  notification.created_at
-                }
-              </p>
-
-              <hr />
-
-            </div>
-
-          )
-        )
-
-      )}
-
-
-      {/* ======================================================
-          SAVINGS GOALS
-      ====================================================== */}
-
-      <hr />
-
-      <h2>
-        🎯 Savings Goals
-      </h2>
-
-      <form
-        onSubmit={
-          handleSavingsGoalSubmit
-        }
-      >
-
-        <div>
-
-          <label>
-            Goal Name:{' '}
-          </label>
-
-          <input
-            type="text"
-            placeholder="Example: New Laptop"
-            value={
-              savingsGoalForm.goal_name
-            }
-            onChange={(e) =>
-              setSavingsGoalForm({
-                ...savingsGoalForm,
-                goal_name:
-                  e.target.value,
-              })
-            }
-            required
-          />
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Target Amount:{' '}
-          </label>
-
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            placeholder="50000"
-            value={
-              savingsGoalForm.target_amount
-            }
-            onChange={(e) =>
-              setSavingsGoalForm({
-                ...savingsGoalForm,
-                target_amount:
-                  e.target.value,
-              })
-            }
-            required
-          />
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Current Saved Amount:{' '}
-          </label>
-
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0"
-            value={
-              savingsGoalForm.current_amount
-            }
-            onChange={(e) =>
-              setSavingsGoalForm({
-                ...savingsGoalForm,
-                current_amount:
-                  e.target.value,
-              })
-            }
-          />
-
-        </div>
-
-        <br />
-
-        <div>
-
-          <label>
-            Deadline:{' '}
-          </label>
-
-          <input
-            type="date"
-            value={
-              savingsGoalForm.deadline
-            }
-            onChange={(e) =>
-              setSavingsGoalForm({
-                ...savingsGoalForm,
-                deadline:
-                  e.target.value,
-              })
-            }
-          />
-
-        </div>
-
-        <br />
-
-        <button
-          className="submit-btn"
-          type="submit"
-        >
-          Create Savings Goal
-        </button>
-
-      </form>
-
-
-      {/* ======================================================
-          SAVINGS GOAL LIST
-      ====================================================== */}
-
-      <h3>
-        My Savings Goals
-      </h3>
-
-      {savingsGoals.length === 0 ? (
-
-        <p>
-          No savings goals found.
-        </p>
-
-      ) : (
-
-        savingsGoals.map(
-          (goal) => (
-
-            <div
-              key={goal.id}
-            >
-
-              <p>
-
-                <strong>
-                  {goal.goal_name}
-                </strong>
-
-              </p>
-
-              <p>
-                Target Amount: ₹
-                {goal.target_amount}
-              </p>
-
-              <p>
-                Current Saved: ₹
-                {goal.current_amount}
-              </p>
-
-              <p>
-                Progress:{' '}
-                {goal.progress_percentage}%
-              </p>
-
-              <progress
-                value={Number(
-                  goal.progress_percentage
-                )}
-                max="100"
-              />
-
-              <p>
-                Status:{' '}
-                <strong>
-                  {goal.status}
-                </strong>
-              </p>
-
-              {goal.deadline && (
-                <p>
-                  Deadline:{' '}
-                  {goal.deadline}
-                </p>
-              )}
-
-              {goal.status !==
-                'completed' && (
-
-                <div>
-
-                  <label>
-                    Update Saved Amount:{' '}
-                  </label>
-
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={
-                      progressValues[
-                        goal.id
-                      ] || ''
-                    }
-                    onChange={(e) =>
-                      setProgressValues({
-                        ...progressValues,
-                        [goal.id]:
-                          e.target.value,
-                      })
-                    }
-                  />
-
-                  <button
-                    onClick={() =>
-                      handleProgressUpdate(
-                        goal.id,
-                        progressValues[
-                          goal.id
-                        ]
-                      )
-                    }
-                  >
-                    Update Progress
-                  </button>
-
-                </div>
-
-              )}
-
-              <hr />
-
-            </div>
-
-          )
-        )
-
-      )}
-
-
-      {/* ======================================================
-          RECENT TRANSACTIONS
-      ====================================================== */}
-
-      {dashboard?.recent_transactions && (
-
-        <div>
-
-          <h2>
-            🧾 Recent Transactions
-          </h2>
-
-          {dashboard
-            .recent_transactions
-            .length === 0 ? (
-
-            <p>
-              No recent transactions.
-            </p>
-
-          ) : (
-
-            dashboard
-              .recent_transactions
-              .map(
-                (
-                  transaction,
-                  index
-                ) => (
-
-                  <div
-                    key={index}
-                  >
-
-                    <p>
-
-                      <strong>
-                        {
-                          transaction.type
-                        }
-                      </strong>
-
-                      {' - '}
-
-                      {
-                        transaction.source ||
-                        transaction.category
-                      }
-
-                      {' - ₹'}
-
-                      {
-                        transaction.amount
-                      }
-
-                    </p>
-
-                    <p>
-                      {
-                        transaction.date
-                      }
-                    </p>
-
-                    <hr />
-
+                {notificationsOpen && (
+                  <div className="bb-notification-pop">
+                    <h3>Notifications</h3>
+                    {notifications.length === 0 ? (
+                      <div className="bb-empty">No notifications found.</div>
+                    ) : (
+                      notifications.slice(0,8).map(notification => (
+                        <div className="bb-notification" key={notification.id}>
+                          <strong>{notification.notification_type || 'Financial alert'}</strong>
+                          <p>{notification.message}</p>
+                          <small>{notification.created_at || ''}</small>
+                          {!notification.is_read && (
+                            <div>
+                              <button className="bb-read" onClick={() => handleMarkNotificationRead(notification.id)}>
+                                Mark as Read
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
+                )}
+              </div>
+            </header>
 
-                )
-              )
+            {message && !error && <div className="bb-message">{message}</div>}
+            {error && <div className="bb-error">{error}</div>}
 
-          )}
+            {loading ? (
+              <div className="bb-card bb-panel">
+                <div className="bb-empty">Loading your financial data...</div>
+              </div>
+            ) : (
+              <>
+                {selectedSection === 'overview' && (
+                  <>
+                    <div className="bb-grid-4">
+                      <div className="bb-card bb-stat green"><span className="bb-label">TOTAL INCOME</span><span className="bb-value">₹{formatAmount(totalIncome)}</span><span className="bb-sub">All recorded income</span></div>
+                      <div className="bb-card bb-stat red"><span className="bb-label">TOTAL EXPENSES</span><span className="bb-value">₹{formatAmount(totalExpenses)}</span><span className="bb-sub">All recorded expenses</span></div>
+                      <div className="bb-card bb-stat purple"><span className="bb-label">BALANCE</span><span className="bb-value">₹{formatAmount(financialSavings)}</span><span className="bb-sub">Income minus expenses</span></div>
+                      <div className="bb-card bb-stat yellow"><span className="bb-label">TRANSACTIONS</span><span className="bb-value">{incomes.length + expenses.length}</span><span className="bb-sub">Income + expenses</span></div>
+                    </div>
 
-        </div>
+                    <div className="bb-grid-2" style={{marginTop:10}}>
+                      <div className="bb-card bb-panel">
+                        <div className="bb-panel-head"><div><h2>Recent Activity</h2><span>Latest financial transactions</span></div></div>
+                        <div className="bb-list">
+                          {(dashboard?.recent_transactions || []).slice(0,7).map((transaction,index) => {
+                            const isExpense = String(transaction.type || '').toLowerCase().includes('expense')
+                            return (
+                              <div className="bb-row" key={index}>
+                                <div className="bb-row-main">
+                                  <strong>{transaction.source || transaction.category || transaction.type || 'Transaction'}</strong>
+                                  <span>{transaction.date || '—'}</span>
+                                </div>
+                                <span className={isExpense ? 'bb-negative' : 'bb-positive'}>
+                                  {isExpense ? '-' : '+'} ₹{formatAmount(transaction.amount)}
+                                </span>
+                              </div>
+                            )
+                          })}
+                          {(!dashboard?.recent_transactions || dashboard.recent_transactions.length === 0) && <div className="bb-empty">No recent transactions.</div>}
+                        </div>
+                      </div>
 
-      )}
+                      <div className="bb-card bb-panel">
+                        <div className="bb-panel-head"><div><h2>Notifications</h2><span>Important financial alerts</span></div><span>{unreadNotifications} unread</span></div>
+                        <div className="bb-list">
+                          {notifications.slice(0,5).map(notification => (
+                            <div className="bb-row" key={notification.id}>
+                              <div className="bb-row-main">
+                                <strong>{notification.notification_type || 'Notification'}</strong>
+                                <span>{notification.message}</span>
+                              </div>
+                              {!notification.is_read && <button className="bb-btn" onClick={() => handleMarkNotificationRead(notification.id)}>Read</button>}
+                            </div>
+                          ))}
+                          {notifications.length === 0 && <div className="bb-empty">No notifications found.</div>}
+                        </div>
+                      </div>
+                    </div>
 
+                    <div className="bb-grid-3" style={{marginTop:10}}>
+                      <div className="bb-card bb-stat green"><span className="bb-label">SAVINGS RATE</span><span className="bb-value">{savingsPercent.toFixed(1)}%</span><span className="bb-sub">Current balance / income</span></div>
+                      <div className="bb-card bb-stat purple"><span className="bb-label">SAVINGS GOALS</span><span className="bb-value">{savingsGoals.length}</span><span className="bb-sub">Active goals</span></div>
+                      <div className="bb-card bb-stat yellow"><span className="bb-label">BUDGET CATEGORIES</span><span className="bb-value">{budgets.length}</span><span className="bb-sub">Loaded from your account</span></div>
+                    </div>
+                  </>
+                )}
 
-      {/* ======================================================
-          REFRESH + LOGOUT
-      ====================================================== */}
+                {selectedSection === 'budgets' && (
+                  <>
+                    <div className="bb-card bb-panel">
+                      <div className="bb-panel-head">
+                        <div>
+                          <h2>Monthly Budgets</h2>
+                          <span>Create and review your category limits by month</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button className="bb-btn" onClick={() => setShowBudgetForm((value) => !value)}>
+                            {showBudgetForm ? 'Close Form' : '+ New Budget'}
+                          </button>
+                          <button className="bb-btn secondary" onClick={loadData}>Refresh</button>
+                        </div>
+                      </div>
 
-      <br />
+                      {showBudgetForm && (
+                        <form className="bb-form" onSubmit={handleBudgetSubmit} style={{ marginTop: 12, padding: 12, border: '1px solid #27314A', borderRadius: 8, background: '#10182B' }}>
+                          <h3 style={{ margin: '0 0 10px', fontSize: '12px', color: '#F8FAFC' }}>Create Monthly Budget</h3>
+                          <div className="bb-form-grid" style={{ marginBottom: 10, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                            <div className="bb-field">
+                              <label>Month</label>
+                              <select value={budgetMonth} onChange={(event) => setBudgetMonth(event.target.value)}>
+                                {[
+                                  ['01', 'January'], ['02', 'February'], ['03', 'March'],
+                                  ['04', 'April'], ['05', 'May'], ['06', 'June'],
+                                  ['07', 'July'], ['08', 'August'], ['09', 'September'],
+                                  ['10', 'October'], ['11', 'November'], ['12', 'December'],
+                                ].map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                              </select>
+                            </div>
+                            <div className="bb-field">
+                              <label>Year</label>
+                              <select value={budgetYear} onChange={(event) => setBudgetYear(event.target.value)}>
+                                {Array.from({ length: 7 }, (_, index) => currentBudgetDate.getFullYear() - 2 + index).map((year) => (
+                                  <option key={year} value={String(year)}>{year}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
 
-      <button
-        className="submit-btn"
-        onClick={loadData}
-        disabled={loading}
-      >
-        {loading
-          ? 'Refreshing...'
-          : '🔄 Refresh Dashboard'}
-      </button>
+                          <div className="bb-form-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+                            {CATEGORIES.map((category) => (
+                              <div className="bb-field" key={category}>
+                                <label>{category} budget (₹)</label>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  placeholder="Leave blank to skip"
+                                  value={budgetAmounts[category] || ''}
+                                  onChange={(event) => setBudgetAmounts((previous) => ({
+                                    ...previous,
+                                    [category]: event.target.value,
+                                  }))}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="bb-form-actions">
+                            <button
+                              type="button"
+                              className="bb-btn secondary"
+                              onClick={() => {
+                                setShowBudgetForm(false)
+                                setBudgetAmounts({})
+                                setError('')
+                              }}
+                              disabled={budgetSaving}
+                            >
+                              Cancel
+                            </button>
+                            <button className="bb-btn" type="submit" disabled={budgetSaving}>
+                              {budgetSaving ? 'Saving...' : 'Create Budget'}
+                            </button>
+                          </div>
+                        </form>
+                      )}
 
-      <br />
-      <br />
+                      {sortedBudgetMonths.length === 0 ? (
+                        <div className="bb-empty">No budgets found. Select “New Budget” to create your first monthly budget.</div>
+                      ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(245px, 1fr))', alignItems: 'start', gap: 10, marginTop: 12 }}>
+                          {sortedBudgetMonths.map((monthKey) => {
+                            const monthBudgets = groupedBudgets[monthKey]
+                            const monthTotal = monthBudgets.reduce((sum, budget) => sum + Number(budget.budget_amount || 0), 0)
+                            return (
+                              <div className="bb-card bb-budget-card" key={monthKey} style={{ padding: 12, minWidth: 0 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                                  <h3>{formatMonthLabel(monthKey)}</h3>
+                                  <div style={{ textAlign: 'right' }}>
+                                    <span style={{ display: 'block', fontSize: 8, color: '#94A3B8' }}>TOTAL MONTHLY BUDGET</span>
+                                    <strong style={{ color: '#C4B5FD', fontSize: 15 }}>₹{formatAmount(monthTotal)}</strong>
+                                  </div>
+                                </div>
+                                <div className="bb-form-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                                  {monthBudgets.map((budget, index) => {
+                                    const amount = Number(budget.budget_amount || 0)
+                                    const spent = Number(budget.spent_amount || 0)
+                                    const remaining = Number(budget.remaining_amount ?? amount - spent)
+                                    const percent = amount > 0 ? Math.min(100, Math.max(0, spent / amount * 100)) : 0
+                                    return (
+                                      <div key={`${budget.category}-${index}`} style={{ padding: 9, minWidth: 0, border: '1px solid #27314A', borderRadius: 7, background: '#11192D' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                                          <strong style={{ fontSize: 10, color: '#E5E7EB' }}>{budget.category}</strong>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                            <strong style={{ fontSize: 10, color: '#C4B5FD' }}>₹{formatAmount(amount)}</strong>
+                                            {(() => {
+                                              const record = budgetRecords.find((item) =>
+                                                item.category === budget.category &&
+                                                String(item.month || '').slice(0, 7) === monthKey
+                                              )
+                                              return (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleDeleteBudget(record?.id)}
+                                                  title={`Delete ${budget.category} budget`}
+                                                  style={{ border: '1px solid #27314A', background: '#182238', color: '#94A3B8', borderRadius: 4, padding: '2px 5px', fontSize: 8, cursor: 'pointer' }}
+                                                >
+                                                  Del
+                                                </button>
+                                              )
+                                            })()}
+                                          </div>
+                                        </div>
+                                        <div className="bb-progress">
+                                          <div style={{ width: `${percent}%`, background: percent >= 90 ? '#EF4444' : '#7C3AED' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 8, color: '#94A3B8' }}>
+                                          <span>Spent ₹{formatAmount(spent)}</span>
+                                          <span>Left ₹{formatAmount(remaining)}</span>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
 
-      <button
-        className="submit-btn"
-        onClick={handleLogout}
-      >
-        Logout
-      </button>
+                {selectedSection === 'savings' && (
+                  <>
+                    <div className="bb-card bb-panel">
+                      <div className="bb-panel-head">
+                        <div><h2>Savings Goals</h2><span>Track progress toward your targets</span></div>
+                        <button className="bb-btn" onClick={() => setShowSavingsForm(v => !v)}>+ New Goal</button>
+                      </div>
 
-    </div>
+                      {showSavingsForm && (
+                        <form className="bb-form" onSubmit={handleSavingsGoalSubmit}>
+                          <div className="bb-form-grid">
+                            <div className="bb-field"><label>Goal Name</label><input value={savingsGoalForm.goal_name} onChange={e=>setSavingsGoalForm({...savingsGoalForm,goal_name:e.target.value})} required /></div>
+                            <div className="bb-field"><label>Target Amount</label><input type="number" step="0.01" min="0.01" value={savingsGoalForm.target_amount} onChange={e=>setSavingsGoalForm({...savingsGoalForm,target_amount:e.target.value})} required /></div>
+                            <div className="bb-field"><label>Current Amount</label><input type="number" step="0.01" min="0" value={savingsGoalForm.current_amount} onChange={e=>setSavingsGoalForm({...savingsGoalForm,current_amount:e.target.value})} /></div>
+                            <div className="bb-field"><label>Deadline</label><input type="date" value={savingsGoalForm.deadline} onChange={e=>setSavingsGoalForm({...savingsGoalForm,deadline:e.target.value})} /></div>
+                          </div>
+                          <div className="bb-form-actions">
+                            <button type="button" className="bb-btn secondary" onClick={()=>setShowSavingsForm(false)}>Cancel</button>
+                            <button className="bb-btn" type="submit">Create Goal</button>
+                          </div>
+                        </form>
+                      )}
+
+                      <div className="bb-grid-3" style={{marginTop:10}}>
+                        {savingsGoals.map(goal => {
+                          const progress=Math.min(100,Math.max(0,Number(goal.progress_percentage || 0)))
+                          return (
+                            <div className="bb-card bb-goal" key={goal.id}>
+                              <h3>{goal.goal_name}</h3>
+                              <div className="bb-goal-meta"><span>₹{formatAmount(goal.current_amount)} saved</span><span>₹{formatAmount(goal.target_amount)} target</span></div>
+                              <div className="bb-progress"><div style={{width:`${progress}%`}} /></div>
+                              <div className="bb-goal-meta"><span>{progress.toFixed(0)}% complete</span><span>{goal.status || ''}</span></div>
+                              {goal.status !== 'completed' && (
+                                <div className="bb-goal-actions">
+                                  <input type="number" step="0.01" min="0" placeholder="New amount" value={progressValues[goal.id] || ''} onChange={e=>setProgressValues({...progressValues,[goal.id]:e.target.value})}/>
+                                  <button className="bb-btn" onClick={()=>handleProgressUpdate(goal.id,progressValues[goal.id])}>Update</button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      {savingsGoals.length === 0 && <div className="bb-empty">No savings goals found.</div>}
+                    </div>
+                  </>
+                )}
+
+                {selectedSection === 'income' && (
+                  <div className="bb-card bb-panel">
+                    <div className="bb-panel-head">
+                      <div><h2>Income</h2><span>Your recorded income sources</span></div>
+                      <button className="bb-btn" onClick={()=>setShowIncomeForm(v=>!v)}>+ Add</button>
+                    </div>
+
+                    {showIncomeForm && (
+                      <form className="bb-form" onSubmit={handleIncomeSubmit}>
+                        <div className="bb-form-grid">
+                          <div className="bb-field"><label>Source</label><input value={incomeForm.source} onChange={e=>setIncomeForm({...incomeForm,source:e.target.value})} required /></div>
+                          <div className="bb-field"><label>Amount</label><input type="number" step="0.01" min="0.01" value={incomeForm.amount} onChange={e=>setIncomeForm({...incomeForm,amount:e.target.value})} required /></div>
+                          <div className="bb-field"><label>Date</label><input type="date" value={incomeForm.date} onChange={e=>setIncomeForm({...incomeForm,date:e.target.value})} required /></div>
+                          <div className="bb-field"><label>Description</label><input value={incomeForm.description} onChange={e=>setIncomeForm({...incomeForm,description:e.target.value})}/></div>
+                        </div>
+                        <div className="bb-form-actions">
+                          <button type="button" className="bb-btn secondary" onClick={()=>setShowIncomeForm(false)}>Cancel</button>
+                          <button className="bb-btn" type="submit">Add Income</button>
+                        </div>
+                      </form>
+                    )}
+
+                    <div className="bb-list" style={{marginTop:10}}>
+                      {incomes.map(income => (
+                        <div className="bb-row" key={income.id}>
+                          <div className="bb-row-main"><strong>{income.source || 'Income'}</strong><span>{income.date || '—'} {income.description ? `• ${income.description}` : ''}</span></div>
+                          <strong className="bb-positive">₹{formatAmount(income.amount)}</strong>
+                        </div>
+                      ))}
+                      {incomes.length===0 && <div className="bb-empty">No income records found.</div>}
+                    </div>
+                  </div>
+                )}
+
+                {selectedSection === 'expenses' && (
+                  <div className="bb-card bb-panel">
+                    <div className="bb-panel-head">
+                      <div><h2>Expenses</h2><span>Review and manage your spending</span></div>
+                      <button className="bb-btn" onClick={()=>setShowExpenseForm(v=>!v)}>+ Add</button>
+                    </div>
+
+                    {showExpenseForm && (
+                      <form className="bb-form" onSubmit={handleExpenseSubmit}>
+                        <div className="bb-form-grid">
+                          <div className="bb-field"><label>Category</label><select value={expenseForm.category} onChange={e=>setExpenseForm({...expenseForm,category:e.target.value})}>{CATEGORIES.map(category=><option key={category}>{category}</option>)}</select></div>
+                          <div className="bb-field"><label>Amount</label><input type="number" step="0.01" min="0.01" value={expenseForm.amount} onChange={e=>setExpenseForm({...expenseForm,amount:e.target.value})} required /></div>
+                          <div className="bb-field"><label>Date</label><input type="date" value={expenseForm.date} onChange={e=>setExpenseForm({...expenseForm,date:e.target.value})} required /></div>
+                          <div className="bb-field"><label>Description</label><input value={expenseForm.description} onChange={e=>setExpenseForm({...expenseForm,description:e.target.value})}/></div>
+                        </div>
+                        <div className="bb-form-actions">
+                          <button type="button" className="bb-btn secondary" onClick={()=>setShowExpenseForm(false)}>Cancel</button>
+                          <button className="bb-btn" type="submit">Add Expense</button>
+                        </div>
+                      </form>
+                    )}
+
+                    <div className="bb-list" style={{marginTop:10}}>
+                      {expenses.map(expense => (
+                        <div className="bb-table-row" key={expense.id}>
+                          <span><span className={`bb-badge ${categoryClass(expense.category)}`}>{expense.category || 'Other'}</span></span>
+                          <span>{expense.description || 'Expense'}</span>
+                          <span>{expense.date || '—'}</span>
+                          <span className="amount">₹{formatAmount(expense.amount)}</span>
+                          <button className="bb-btn danger" onClick={()=>handleDeleteExpense(expense.id)}>Delete</button>
+                        </div>
+                      ))}
+                      {expenses.length===0 && <div className="bb-empty">No expenses found.</div>}
+                    </div>
+                  </div>
+                )}
+
+                {selectedSection === 'analytics' && (
+                  <>
+                    <div className="bb-small-metrics">
+                      <div className="bb-mini"><span>Total Income</span><strong>₹{formatAmount(totalIncome)}</strong></div>
+                      <div className="bb-mini"><span>Total Expenses</span><strong>₹{formatAmount(totalExpenses)}</strong></div>
+                      <div className="bb-mini"><span>Savings %</span><strong>{savingsPercent.toFixed(1)}%</strong></div>
+                      <div className="bb-mini"><span>Transactions</span><strong>{incomes.length + expenses.length}</strong></div>
+                    </div>
+
+                    <div className="bb-grid-2">
+                      <div className="bb-card bb-chart-card">
+                        <h3>Category-wise Spending</h3>
+                        <div className="bb-chart-wrap">
+                          {categoryChartData.length ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie data={categoryChartData} dataKey="amount" nameKey="category" cx="50%" cy="50%" innerRadius={52} outerRadius={82} paddingAngle={2}>
+                                  {categoryChartData.map((entry,index)=><Cell key={entry.category} fill={CHART_COLORS[index % CHART_COLORS.length]}/>)}
+                                </Pie>
+                                <Tooltip content={<CategoryTooltip/>}/>
+                                <Legend wrapperStyle={{fontSize:'9px',color:'#94A3B8'}}/>
+                              </PieChart>
+                            </ResponsiveContainer>
+                          ) : <div className="bb-empty">No expense data available.</div>}
+                        </div>
+                      </div>
+
+                      <div className="bb-card bb-chart-card">
+                        <h3>Monthly Income / Expense Trends</h3>
+                        <div className="bb-chart-wrap">
+                          {monthlyChartData.length ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={monthlyChartData}>
+                                <CartesianGrid stroke="#27314A" strokeDasharray="3 3"/>
+                                <XAxis dataKey="monthLabel" tick={{fill:'#94A3B8',fontSize:8}}/>
+                                <YAxis tick={{fill:'#94A3B8',fontSize:8}}/>
+                                <Tooltip content={<MonthlyTooltip/>}/>
+                                <Legend wrapperStyle={{fontSize:'9px'}}/>
+                                <Bar dataKey="income" name="Income" fill="#10B981" radius={[4,4,0,0]}/>
+                                <Bar dataKey="expenses" name="Expenses" fill="#EF4444" radius={[4,4,0,0]}/>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          ) : <div className="bb-empty">No monthly data available.</div>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bb-grid-2" style={{marginTop:10}}>
+                      <div className="bb-card bb-panel">
+                        <div className="bb-panel-head"><div><h2>Savings Progress</h2><span>Overall savings position</span></div><strong style={{fontSize:12,color:'#10B981'}}>{savingsPercent.toFixed(1)}%</strong></div>
+                        <div className="bb-progress"><div style={{width:`${savingsPercent}%`,background:'#10B981'}}/></div>
+                        <div className="bb-goal-meta"><span>₹{formatAmount(financialSavings)} saved</span><span>₹{formatAmount(totalIncome)} income</span></div>
+                      </div>
+                      <div className="bb-card bb-panel">
+                        <div className="bb-panel-head"><div><h2>Budget Summary</h2><span>Current utilization</span></div></div>
+                        <div className="bb-list">
+                          {budgets.slice(0,4).map((budget,index)=>{
+                            const total=Number(budget.budget_amount||0), spent=Number(budget.spent_amount||0)
+                            const pct=total>0?Math.min(100,(spent/total)*100):0
+                            return <div className="bb-row" key={budget.id||index}><div className="bb-row-main"><strong>{budget.category||'Budget'}</strong><span>{pct.toFixed(0)}% used</span></div><strong style={{fontSize:10,color:pct>=90?'#EF4444':'#E5E7EB'}}>₹{formatAmount(spent)}</strong></div>
+                          })}
+                          {budgets.length===0 && <div className="bb-empty">No budgets found.</div>}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {selectedSection === 'reports' && (
+                  <div className="bb-card bb-panel" style={{padding:0,overflow:'hidden'}}>
+                    <Reports />
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="bb-refresh">
+              <button className="bb-btn secondary" onClick={loadData} disabled={loading}>
+                {loading ? 'Refreshing...' : 'Refresh Dashboard'}
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </>
   )
 }
-
 
 // ============================================================
 // PROTECTED ROUTE
@@ -2469,116 +1854,91 @@ function ProtectedRoute({
 // APP
 // ============================================================
 
-function App() {
-  const isLoggedIn =
-    !!localStorage.getItem(
-      'access_token'
-    )
+
+function AppLayout() {
+  const location = useLocation()
+  const isLoggedIn = Boolean(localStorage.getItem('access_token'))
+
+  const isAuthPage =
+    location.pathname === '/login' ||
+    location.pathname === '/register'
 
   return (
-    <BrowserRouter>
-
-      <div className="app">
-
-        <nav className="navbar">
-
-          <h2>
-            💰 BudgetBuddy
-          </h2>
+    <div className="app">
+      {!isLoggedIn && isAuthPage && (
+        <header className="navbar">
+          <Link to="/" style={{ textDecoration: 'none' }}>
+            <h2>💰 BudgetBuddy</h2>
+          </Link>
 
           <div>
-
-            <Link to="/">
-              Home
-            </Link>
-
-            {!isLoggedIn && (
-              <>
-                <Link to="/register">
-                  Register
-                </Link>
-
-                <Link to="/login">
-                  Login
-                </Link>
-              </>
-            )}
-
-            {isLoggedIn && (
-              <>
-                <Link to="/dashboard">
-                  Dashboard
-                </Link>
-
-                <Link to="/reports">
-                  Reports
-                </Link>
-              </>
-            )}
-
+            <Link to="/login">Login</Link>
+            <Link to="/register">Register</Link>
           </div>
+        </header>
+      )}
 
-        </nav>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            isLoggedIn
+              ? <Navigate to="/dashboard" replace />
+              : <Home />
+          }
+        />
 
-        <main>
+        <Route
+          path="/register"
+          element={
+            isLoggedIn
+              ? <Navigate to="/dashboard" replace />
+              : <Register />
+          }
+        />
 
-          <Routes>
+        <Route
+          path="/login"
+          element={
+            isLoggedIn
+              ? <Navigate to="/dashboard" replace />
+              : <Login />
+          }
+        />
 
-            <Route
-              path="/"
-              element={
-                <Home />
-              }
-            />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
-            <Route
-              path="/register"
-              element={
-                <Register />
-              }
-            />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          }
+        />
 
-            <Route
-              path="/login"
-              element={
-                <Login />
-              }
-            />
-
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route path="/reports" element={
-                <ProtectedRoute>
-                  <Reports />
-                  </ProtectedRoute>
-              } />
-
-            <Route
-              path="*"
-              element={
-                <Navigate
-                  to="/"
-                  replace
-                />
-              }
-            />
-
-          </Routes>
-
-        </main>
-
-      </div>
-
-    </BrowserRouter>
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
+      </Routes>
+    </div>
   )
 }
 
+function App() {
+  return (
+    <BrowserRouter>
+      <AppLayout />
+    </BrowserRouter>
+  )
+}
 
 export default App

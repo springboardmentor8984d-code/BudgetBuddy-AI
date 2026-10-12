@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
+
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -22,7 +23,6 @@ load_dotenv(BASE_DIR / '.env')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-
 
 ALLOWED_HOSTS = os.getenv(
     'ALLOWED_HOSTS',
@@ -107,6 +107,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+
 # Internationalization
 
 LANGUAGE_CODE = 'en-us'
@@ -122,6 +123,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 
 # Email
 
@@ -154,17 +156,14 @@ SIMPLE_JWT = {
 
 
 # CORS Settings
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "http://localhost:5174",
     "http://localhost:5175",
-]
-
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://localhost:5175'
-    ).split(',')
-    if origin.strip()
+    "http://localhost:5176",
+    "http://localhost:5177",
+    "http://localhost:5178",
+    "http://localhost:5179",
+    "http://localhost:5179",
+    "http://localhost:5181"
 ]
