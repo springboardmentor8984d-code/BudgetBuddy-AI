@@ -1,0 +1,10 @@
+* [33m82ebaa31[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32msubmit-budgetbuddy[m[33m)[m Update registration OTP validation
+* [33m6cf5ab31[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Add Forgot Password option and verify email via OTP before password creation
+* [33m797d769a[m trigger vercel deployment
+* [33m64e5cdf3[m Support Brevo transactional email REST API for OTP verification and password reset
+* [33m1a6f54af[m Add email OTP verification for registration and forgot password reset
+* [33ma9b17dc2[m kjh
+* [33me06c312e[m kasj
+* [33m38aab4fe[m Fix invalid JSON in frontend/vercel.json
+* [33m24dd07a6[m Update BudgetBuddy
+* [33m8d757297[m Update BudgetBuddy
