@@ -154,7 +154,6 @@ SIMPLE_JWT = {
     ),
 }
 
-
 # CORS Settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
@@ -164,6 +163,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5177",
     "http://localhost:5178",
     "http://localhost:5179",
-    "http://localhost:5179",
-    "http://localhost:5181"
+    "http://localhost:5181",
+    "https://budgetbuddy-frontend-pi.vercel.app",
 ]
