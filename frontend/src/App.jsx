@@ -198,34 +198,41 @@ function CategoryTooltip({ active, payload }) {
   return (
     <div
       style={{
-        background: '#ffffff',
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        padding: '10px 14px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-      }}
+  background: '#111827',
+  border: '1px solid #27314A',
+  borderRadius: '8px',
+  padding: '10px 14px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+  color: '#F8FAFC',
+}}
     >
+     <p
+  style={{
+    margin: 0,
+    fontWeight: 'bold',
+    color: '#E5E7EB',
+  }}
+>
+  {item.category}
+</p>
       <p
-        style={{
-          margin: 0,
-          fontWeight: 'bold',
-        }}
-      >
-        {item.category}
-      </p>
+  style={{
+    margin: '5px 0 0',
+    color: '#CBD5E1',
+  }}
+>
+  ₹{formatAmount(item.amount)}
+</p>
 
-      <p style={{ margin: '5px 0 0' }}>
-        ₹{formatAmount(item.amount)}
-      </p>
-
-      <p
-        style={{
-          margin: '5px 0 0',
-          fontSize: '13px',
-        }}
-      >
-        {item.percentage.toFixed(1)}%
-      </p>
+     <p
+  style={{
+    margin: '5px 0 0',
+    fontSize: '13px',
+    color: '#CBD5E1',
+  }}
+>
+  {item.percentage.toFixed(1)}%
+</p>
     </div>
   )
 }
@@ -242,35 +249,40 @@ function MonthlyTooltip({ active, payload, label }) {
 
   return (
     <div
-      style={{
-        background: '#ffffff',
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        padding: '10px 14px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-      }}
-    >
-      <p
-        style={{
-          margin: '0 0 8px',
-          fontWeight: 'bold',
-        }}
-      >
-        {label}
-      </p>
+  style={{
+    background: '#111827',
+    border: '1px solid #27314A',
+    borderRadius: '8px',
+    padding: '10px 14px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+    color: '#F8FAFC',
+  }}
+>
+    <p
+  style={{
+    margin: '0 0 8px',
+    fontWeight: 'bold',
+    color: '#E5E7EB',
+  }}
+>
+  {label}
+</p>
 
       {payload.map((item) => (
         <p
-          key={item.dataKey}
-          style={{
-            margin: '4px 0',
-          }}
-        >
-          {item.dataKey === 'income'
-            ? '💰 Income'
-            : '💸 Expenses'}
-          : ₹{formatAmount(item.value)}
-        </p>
+  key={item.dataKey}
+  style={{
+    margin: '4px 0',
+    color: item.dataKey === 'income'
+      ? '#22C55E'
+      : '#EF4444',
+  }}
+>
+  {item.dataKey === 'income'
+    ? '💰 Income'
+    : '💸 Expenses'}
+  : ₹{formatAmount(item.value)}
+</p>
       ))}
     </div>
   )
@@ -320,6 +332,11 @@ function getLoggedInUsername() {
 }
 
 function Dashboard() {
+  const currentDate = new Date().toLocaleDateString('en-IN', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric'
+})
   const navigate = useNavigate()
 
   const [message, setMessage] = useState(
@@ -670,7 +687,106 @@ function Dashboard() {
     }
   }
 
+// ==========================================================
+// EDIT INCOME
+// ==========================================================
 
+const handleEditIncome = async (income) => {
+  const newSource = window.prompt(
+    'Enter income source:',
+    income.source || ''
+  )
+
+  if (newSource === null) return
+
+  const newAmount = window.prompt(
+    'Enter income amount:',
+    income.amount || ''
+  )
+
+  if (newAmount === null) return
+
+  const newDate = window.prompt(
+    'Enter income date (YYYY-MM-DD):',
+    income.date || ''
+  )
+
+  if (newDate === null) return
+
+  const newDescription = window.prompt(
+    'Enter description:',
+    income.description || ''
+  )
+
+  if (newDescription === null) return
+
+  try {
+    setError('')
+
+    await axios.put(
+      `${API_URL}/incomes/${income.id}/`,
+      {
+        source: newSource,
+        amount: newAmount,
+        date: newDate,
+        description: newDescription,
+      },
+      authConfig
+    )
+
+    alert('Income updated successfully! ✅')
+
+    await loadData()
+
+  } catch (err) {
+    console.error(err)
+
+    const data = err.response?.data
+
+    setError(
+      data?.source?.[0] ||
+      data?.amount?.[0] ||
+      data?.date?.[0] ||
+      data?.description?.[0] ||
+      data?.detail ||
+      'Failed to update income.'
+    )
+  }
+}
+
+
+// ==========================================================
+// DELETE INCOME
+// ==========================================================
+
+const handleDeleteIncome = async (incomeId) => {
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this income?'
+  )
+
+  if (!confirmed) return
+
+  try {
+    setError('')
+
+    await axios.delete(
+      `${API_URL}/incomes/${incomeId}/`,
+      authConfig
+    )
+
+    alert('Income deleted successfully! ✅')
+
+    await loadData()
+
+  } catch (err) {
+    console.error(err)
+
+    setError(
+      err.response?.data?.detail ||
+      'Failed to delete income.'
+    )
+  }
+}
   // ==========================================================
   // CREATE MONTHLY BUDGETS
   // ==========================================================
@@ -885,7 +1001,114 @@ function Dashboard() {
       }
     }
 
+    // ==========================================================
+// EDIT SAVINGS GOAL
+// ==========================================================
 
+const handleEditSavingsGoal = async (goal) => {
+
+  const newName = window.prompt(
+    'Enter savings goal name:',
+    goal.goal_name || ''
+  )
+
+  if (newName === null) return
+
+  const newTarget = window.prompt(
+    'Enter target amount:',
+    goal.target_amount || ''
+  )
+
+  if (newTarget === null) return
+
+  const newCurrent = window.prompt(
+    'Enter current saved amount:',
+    goal.current_amount || ''
+  )
+
+  if (newCurrent === null) return
+
+  const newDeadline = window.prompt(
+    'Enter deadline (YYYY-MM-DD):',
+    goal.deadline || ''
+  )
+
+  if (newDeadline === null) return
+
+  try {
+    setError('')
+
+    await axios.put(
+      `${API_URL}/savings-goals/${goal.id}/`,
+      {
+        goal_name: newName,
+        target_amount: newTarget,
+        current_amount: newCurrent,
+        deadline: newDeadline,
+      },
+      authConfig
+    )
+
+    alert('Savings goal updated successfully! ✅')
+
+    await loadData()
+
+  } catch (err) {
+    console.error(err)
+
+    const data = err.response?.data
+
+    setError(
+      data?.goal_name?.[0] ||
+      data?.target_amount?.[0] ||
+      data?.current_amount?.[0] ||
+      data?.deadline?.[0] ||
+      data?.detail ||
+      'Failed to update savings goal.'
+    )
+  }
+}
+
+// ==========================================================
+// DELETE SAVINGS GOAL
+// ==========================================================
+
+const handleDeleteSavingsGoal =
+  async (goalId) => {
+
+    const confirmDelete =
+      window.confirm(
+        'Are you sure you want to delete this savings goal?'
+      )
+
+    if (!confirmDelete) {
+      return
+    }
+
+    try {
+      setError('')
+
+      await axios.delete(
+        `${API_URL}/savings-goals/${goalId}/`,
+        authConfig
+      )
+
+      alert(
+        'Savings goal deleted successfully! ✅'
+      )
+
+      await loadData()
+
+    } catch (err) {
+      console.error(err)
+
+      setError(
+        err.response?.data?.detail ||
+        err.message ||
+        'Failed to delete savings goal.'
+      )
+    }
+  }
   // ==========================================================
   // DELETE EXPENSE
   // ==========================================================
@@ -1182,15 +1405,22 @@ function Dashboard() {
         }
         .bb-header h1{margin:0;font-size:19px;line-height:1.2;color:#F8FAFC}
         .bb-header p{margin:4px 0 0;font-size:10px;color:#64748B}
-        .bb-header-right{position:relative;display:flex;align-items:center;gap:9px}
-        .bb-bell{
-          position:relative;width:34px;height:34px;border-radius:8px;
-          border:1px solid #27314A;background:#11192D;color:#E5E7EB;
-          cursor:pointer;font-size:15px;
-        }
+        .bb-header-right{position:relative;display:flex;align-items:center;gap:12px;margin-right:20px}
+      .bb-bell{
+  position:relative;
+  width:auto;
+  height:auto;
+  border:none;
+  background:transparent;
+  color:#E5E7EB;
+  cursor:pointer;
+  font-size:22px;
+  padding:0;
+  margin:0 4px 0 8px;
+}
         .bb-bell:hover{border-color:#7C3AED;background:#171F35}
         .bb-count{
-          position:absolute;right:-4px;top:-5px;min-width:15px;height:15px;
+          position:absoluteright:-7px;top:-7px;min-width:15px;height:15px;
           padding:0 4px;border-radius:20px;background:#EF4444;color:#fff;
           font-size:8px;display:grid;place-items:center;border:2px solid #080D1C;
         }
@@ -1376,12 +1606,15 @@ function Dashboard() {
                 </p>
               </div>
 
-              <div className="bb-header-right">
+              <div className="bb-header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div className="bb-user-chip">● {username || 'User'}</div>
                 <button className="bb-bell" onClick={() => setNotificationsOpen(v => !v)} aria-label="Notifications">
                   🔔
                   {unreadNotifications > 0 && <span className="bb-count">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
                 </button>
+                 <span style={{ marginLeft: 10, fontSize: 14, color: '#6B7280' }}>
+                   {currentDate}
+                  </span>
 
                 {notificationsOpen && (
                   <div className="bb-notification-pop">
@@ -1426,8 +1659,7 @@ function Dashboard() {
                       <div className="bb-card bb-stat purple"><span className="bb-label">BALANCE</span><span className="bb-value">₹{formatAmount(financialSavings)}</span><span className="bb-sub">Income minus expenses</span></div>
                       <div className="bb-card bb-stat yellow"><span className="bb-label">TRANSACTIONS</span><span className="bb-value">{incomes.length + expenses.length}</span><span className="bb-sub">Income + expenses</span></div>
                     </div>
-
-                    <div className="bb-grid-2" style={{marginTop:10}}>
+                    <div className="bb-grid-2" style={{marginTop:10, gridTemplateColumns:'1fr'}}>
                       <div className="bb-card bb-panel">
                         <div className="bb-panel-head"><div><h2>Recent Activity</h2><span>Latest financial transactions</span></div></div>
                         <div className="bb-list">
@@ -1449,21 +1681,7 @@ function Dashboard() {
                         </div>
                       </div>
 
-                      <div className="bb-card bb-panel">
-                        <div className="bb-panel-head"><div><h2>Notifications</h2><span>Important financial alerts</span></div><span>{unreadNotifications} unread</span></div>
-                        <div className="bb-list">
-                          {notifications.slice(0,5).map(notification => (
-                            <div className="bb-row" key={notification.id}>
-                              <div className="bb-row-main">
-                                <strong>{notification.notification_type || 'Notification'}</strong>
-                                <span>{notification.message}</span>
-                              </div>
-                              {!notification.is_read && <button className="bb-btn" onClick={() => handleMarkNotificationRead(notification.id)}>Read</button>}
-                            </div>
-                          ))}
-                          {notifications.length === 0 && <div className="bb-empty">No notifications found.</div>}
-                        </div>
-                      </div>
+                     
                     </div>
 
                     <div className="bb-grid-3" style={{marginTop:10}}>
@@ -1563,12 +1781,46 @@ function Dashboard() {
                             return (
                               <div className="bb-card bb-budget-card" key={monthKey} style={{ padding: 12, minWidth: 0 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-                                  <h3>{formatMonthLabel(monthKey)}</h3>
-                                  <div style={{ textAlign: 'right' }}>
-                                    <span style={{ display: 'block', fontSize: 8, color: '#94A3B8' }}>TOTAL MONTHLY BUDGET</span>
-                                    <strong style={{ color: '#C4B5FD', fontSize: 15 }}>₹{formatAmount(monthTotal)}</strong>
-                                  </div>
-                                </div>
+  <div>
+    <h3>{formatMonthLabel(monthKey)}</h3>
+  </div>
+
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ textAlign: 'right' }}>
+      <span style={{ display: 'block', fontSize: 8, color: '#94A3B8' }}>
+        TOTAL MONTHLY BUDGET
+      </span>
+      <strong style={{ color: '#C4B5FD', fontSize: 15 }}>
+        ₹{formatAmount(monthTotal)}
+      </strong>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => {
+        const firstBudget = monthBudgets[0]
+        const record = budgetRecords.find((item) =>
+          item.category === firstBudget?.category &&
+          String(item.month || '').slice(0, 7) === monthKey
+        )
+
+        handleDeleteBudget(record?.id)
+      }}
+      title={`Delete ${formatMonthLabel(monthKey)} budget`}
+      style={{
+        border: '1px solid #27314A',
+        background: '#182238',
+        color: '#94A3B8',
+        borderRadius: 4,
+        padding: '4px 7px',
+        fontSize: 8,
+        cursor: 'pointer'
+      }}
+    >
+      Del
+    </button>
+  </div>
+</div>
                                 <div className="bb-form-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
                                   {monthBudgets.map((budget, index) => {
                                     const amount = Number(budget.budget_amount || 0)
@@ -1581,22 +1833,7 @@ function Dashboard() {
                                           <strong style={{ fontSize: 10, color: '#E5E7EB' }}>{budget.category}</strong>
                                           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                                             <strong style={{ fontSize: 10, color: '#C4B5FD' }}>₹{formatAmount(amount)}</strong>
-                                            {(() => {
-                                              const record = budgetRecords.find((item) =>
-                                                item.category === budget.category &&
-                                                String(item.month || '').slice(0, 7) === monthKey
-                                              )
-                                              return (
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleDeleteBudget(record?.id)}
-                                                  title={`Delete ${budget.category} budget`}
-                                                  style={{ border: '1px solid #27314A', background: '#182238', color: '#94A3B8', borderRadius: 4, padding: '2px 5px', fontSize: 8, cursor: 'pointer' }}
-                                                >
-                                                  Del
-                                                </button>
-                                              )
-                                            })()}
+
                                           </div>
                                         </div>
                                         <div className="bb-progress">
@@ -1647,16 +1884,44 @@ function Dashboard() {
                           const progress=Math.min(100,Math.max(0,Number(goal.progress_percentage || 0)))
                           return (
                             <div className="bb-card bb-goal" key={goal.id}>
-                              <h3>{goal.goal_name}</h3>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                                 <h3>{goal.goal_name}</h3>
+
+                                <div style={{ display: 'flex', gap: 6 }}>
+  <button
+    type="button"
+    className="bb-btn"
+    onClick={() => handleProgressUpdate(
+      goal.id,
+      Number(goal.current_amount || 0) + Number(
+        window.prompt('Enter amount to add:', '0') || 0
+      )
+    )}
+  >
+    Add
+  </button>
+
+  <button
+    type="button"
+    className="bb-btn"
+    onClick={() => handleEditSavingsGoal(goal)}
+  >
+    Edit
+  </button>
+
+  <button
+    type="button"
+    className="bb-btn"
+    onClick={() => handleDeleteSavingsGoal(goal.id)}
+  >
+    Del
+  </button>
+</div>
+                              </div>
                               <div className="bb-goal-meta"><span>₹{formatAmount(goal.current_amount)} saved</span><span>₹{formatAmount(goal.target_amount)} target</span></div>
                               <div className="bb-progress"><div style={{width:`${progress}%`}} /></div>
                               <div className="bb-goal-meta"><span>{progress.toFixed(0)}% complete</span><span>{goal.status || ''}</span></div>
-                              {goal.status !== 'completed' && (
-                                <div className="bb-goal-actions">
-                                  <input type="number" step="0.01" min="0" placeholder="New amount" value={progressValues[goal.id] || ''} onChange={e=>setProgressValues({...progressValues,[goal.id]:e.target.value})}/>
-                                  <button className="bb-btn" onClick={()=>handleProgressUpdate(goal.id,progressValues[goal.id])}>Update</button>
-                                </div>
-                              )}
+                          
                             </div>
                           )
                         })}
@@ -1689,12 +1954,49 @@ function Dashboard() {
                     )}
 
                     <div className="bb-list" style={{marginTop:10}}>
-                      {incomes.map(income => (
-                        <div className="bb-row" key={income.id}>
-                          <div className="bb-row-main"><strong>{income.source || 'Income'}</strong><span>{income.date || '—'} {income.description ? `• ${income.description}` : ''}</span></div>
-                          <strong className="bb-positive">₹{formatAmount(income.amount)}</strong>
-                        </div>
-                      ))}
+  {incomes.map(income => (
+    <div className="bb-row" key={income.id}>
+
+      <div className="bb-row-main">
+        <strong>{income.source || 'Income'}</strong>
+
+        <span>
+          {income.date || '—'}
+          {income.description
+            ? ` • ${income.description}`
+            : ''}
+        </span>
+      </div>
+
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px'
+      }}>
+
+        <strong className="bb-positive">
+          ₹{formatAmount(income.amount)}
+        </strong>
+
+        <button
+          className="bb-btn"
+          onClick={() => handleEditIncome(income)}
+        >
+          Edit
+        </button>
+
+        <button
+          className="bb-btn"
+          onClick={() => handleDeleteIncome(income.id)}
+        >
+          Del
+        </button>
+
+      </div>
+
+    </div>
+  ))}
+
                       {incomes.length===0 && <div className="bb-empty">No income records found.</div>}
                     </div>
                   </div>
