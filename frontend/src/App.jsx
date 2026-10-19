@@ -2186,7 +2186,7 @@ function AppLayout() {
           element={
             isLoggedIn
               ? <Navigate to="/dashboard" replace />
-              : <Home />
+             : <Navigate to="/login" replace />
           }
         />
 
