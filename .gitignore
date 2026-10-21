@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+node_modules/
+dist/
+BudgetBuddy/
+backend/db.sqlite3
+backend/*.pdf
+backend/*.xlsx
+
+# Generated Django static files
+backend/staticfiles/

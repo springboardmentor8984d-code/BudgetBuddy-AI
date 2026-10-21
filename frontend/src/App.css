@@ -1,0 +1,1342 @@
+/* =========================================================
+   BUDGETBUDDY - MODERN DASHBOARD UI
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f7fb;
+  color: #1f2937;
+}
+
+.app {
+  min-height: 100vh;
+  padding-left: 240px;
+}
+
+/* =========================================================
+   LEFT SIDEBAR
+   ========================================================= */
+
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  padding: 28px 18px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  background: linear-gradient(180deg, #1e3a8a, #2563eb);
+  color: white;
+
+  position: fixed;
+  left: 0;
+  top: 0;
+
+  box-shadow: 4px 0 15px rgba(30, 58, 138, 0.22);
+  z-index: 1000;
+}
+
+.sidebar h2 {
+  margin: 0 0 30px;
+  padding: 0 10px;
+
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.sidebar a {
+  color: white;
+  text-decoration: none;
+
+  font-weight: 600;
+  font-size: 15px;
+
+  padding: 13px 14px;
+  border-radius: 10px;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.sidebar a:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(4px);
+}
+
+/* =========================================================
+   MAIN PAGE
+   ========================================================= */
+
+.page {
+  width: 100%;
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 35px 25px 70px;
+}
+
+.page > h1 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.page > p {
+  color: #6b7280;
+  margin-top: 0;
+}
+
+/* =========================================================
+   HEADINGS
+   ========================================================= */
+
+.page h2 {
+  color: #1e3a8a;
+  margin-top: 32px;
+  margin-bottom: 18px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.page h3 {
+  color: #374151;
+  margin-top: 25px;
+  margin-bottom: 12px;
+}
+
+/* =========================================================
+   HORIZONTAL LINES
+   ========================================================= */
+
+.page hr {
+  border: 0;
+  border-top: 1px solid #dbe3ef;
+  margin: 32px 0;
+}
+
+/* =========================================================
+   FORMS
+   ========================================================= */
+
+form {
+  background: white;
+  padding: 26px;
+  border-radius: 16px;
+  box-shadow: 0 5px 20px rgba(30, 58, 138, 0.08);
+  max-width: 650px;
+  margin-bottom: 28px;
+  border: 1px solid #edf2f7;
+}
+
+form div {
+  margin-bottom: 15px;
+}
+
+form label {
+  display: inline-block;
+  min-width: 170px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+input,
+select {
+  width: 250px;
+  padding: 11px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: white;
+  color: #111827;
+  outline: none;
+  font-size: 14px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+input:hover,
+select:hover {
+  border-color: #93c5fd;
+}
+
+input:focus,
+select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+button {
+  border: none;
+  border-radius: 9px;
+  padding: 10px 17px;
+  background: #2563eb;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+button:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.submit-btn {
+  background: #16a34a;
+}
+
+.submit-btn:hover {
+  background: #15803d;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2);
+}
+
+/* =========================================================
+   FINANCIAL SUMMARY
+   ========================================================= */
+
+.page > div:first-of-type {
+  background: white;
+  padding: 26px;
+  border-radius: 18px;
+  box-shadow: 0 5px 20px rgba(30, 58, 138, 0.08);
+  margin-top: 25px;
+  margin-bottom: 28px;
+  border: 1px solid #edf2f7;
+}
+
+.page > div:first-of-type p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+/* =========================================================
+   GENERAL CONTENT
+   ========================================================= */
+
+.page > div {
+  line-height: 1.5;
+}
+
+.page > div > p {
+  margin: 7px 0;
+}
+
+/* =========================================================
+   CHART CONTAINERS
+   ========================================================= */
+
+
+
+.recharts-default-tooltip {
+  border-radius: 10px !important;
+}
+
+.recharts-legend-item-text {
+  color: #374151 !important;
+}
+
+/* =========================================================
+   SAVINGS GOAL PROGRESS
+   ========================================================= */
+
+progress {
+  width: 320px;
+  height: 17px;
+  display: block;
+  margin: 10px 0 15px;
+  border: none;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+  background: #e5e7eb;
+  border-radius: 20px;
+}
+
+progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: 20px;
+}
+
+progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: 20px;
+}
+
+/* =========================================================
+   BUDGET / STATUS TEXT
+   ========================================================= */
+
+.page strong {
+  color: #111827;
+}
+
+/* Positive / completed-looking status text */
+
+.page p {
+  line-height: 1.6;
+}
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+
+.page button {
+  margin-top: 5px;
+}
+
+.page button + button {
+  margin-left: 8px;
+}
+
+/* =========================================================
+   ERROR MESSAGE
+   ========================================================= */
+
+.page p[style*="red"] {
+  background: #fee2e2;
+  color: #b91c1c !important;
+  padding: 13px 16px;
+  border-radius: 10px;
+  border-left: 4px solid #dc2626;
+  margin: 15px 0;
+}
+
+/* =========================================================
+   LINKS
+   ========================================================= */
+
+.page a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.page a:hover {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   DATA LISTS / CARDS
+   ========================================================= */
+
+.page ul {
+  padding-left: 20px;
+}
+
+.page li {
+  margin-bottom: 8px;
+}
+
+/* =========================================================
+   CHART / DATA AREA CARD EFFECT
+   ========================================================= */
+
+.page canvas {
+  max-width: 100%;
+}
+
+/* =========================================================
+   TABLE-LIKE CONTENT
+   ========================================================= */
+
+.page table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(30, 58, 138, 0.07);
+}
+
+.page th {
+  background: #eff6ff;
+  color: #1e3a8a;
+  padding: 12px;
+  text-align: left;
+}
+
+.page td {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* =========================================================
+   HOVER EFFECT FOR CARDS / BLOCKS
+   ========================================================= */
+
+.page > div {
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* =========================================================
+   MOBILE RESPONSIVE
+   ========================================================= */
+
+/* =====================================================
+   BUDGETBUDDY — DARK NAVY + PURPLE UI
+   ===================================================== */
+
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  color: #e5e7eb;
+  background: #080d1c;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  --bb-bg: #080d1c;
+  --bb-sidebar: #0c1324;
+  --bb-card: #171f35;
+  --bb-border: #27314a;
+  --bb-purple: #7c3aed;
+  --bb-purple-light: #8b5cf6;
+  --bb-text: #e5e7eb;
+  --bb-muted: #94a3b8;
+  --bb-green: #10b981;
+  --bb-red: #ef4444;
+  --bb-yellow: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  width: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bb-bg);
+  color: var(--bb-text);
+  font-size: 13px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* App shell */
+
+.app {
+  min-height: 100vh;
+  padding-left: 0;
+  background: var(--bb-bg);
+}
+
+/* Public navigation, if rendered by App.jsx */
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 15px 5%;
+  background: var(--bb-sidebar);
+  border-bottom: 1px solid var(--bb-border);
+}
+
+.navbar h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 19px;
+}
+
+.navbar div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar a {
+  color: #c4b5fd;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+/* Legacy sidebar styles */
+
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  padding: 24px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bb-sidebar);
+  color: white;
+  position: fixed;
+  left: 0;
+  top: 0;
+  border-right: 1px solid var(--bb-border);
+  z-index: 1000;
+}
+
+.sidebar h2 {
+  margin: 0 0 24px;
+  padding: 0 10px;
+  color: #f8fafc;
+  font-size: 19px;
+}
+
+.sidebar a {
+  color: var(--bb-muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 11px 12px;
+  border-radius: 8px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar a:hover {
+  background: #1c2540;
+  color: white;
+  transform: none;
+}
+
+/* Main page */
+
+.page {
+  width: 100%;
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 25px;
+  color: var(--bb-text);
+}
+
+.page > h1 {
+  margin: 0 0 8px;
+  color: #f8fafc;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.page > p {
+  color: var(--bb-muted);
+  margin-top: 0;
+}
+
+.page h2 {
+  color: #f1f5f9;
+  margin-top: 24px;
+  margin-bottom: 14px;
+  font-size: 18px;
+}
+
+.page h3 {
+  color: #e2e8f0;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.page hr {
+  border: 0;
+  border-top: 1px solid var(--bb-border);
+  margin: 24px 0;
+}
+
+.page > div {
+  line-height: 1.5;
+}
+
+.page > div > p {
+  margin: 7px 0;
+}
+
+.page strong {
+  color: #f1f5f9;
+}
+
+.page p {
+  line-height: 1.6;
+}
+
+.page a {
+  color: #a78bfa;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.page a:hover {
+  text-decoration: underline;
+}
+
+/* Cards and forms */
+
+form {
+  background: var(--bb-card);
+  padding: 20px;
+  border-radius: 12px;
+  max-width: 650px;
+  margin-bottom: 22px;
+  border: 1px solid var(--bb-border);
+  box-shadow: none;
+}
+
+form div {
+  margin-bottom: 14px;
+}
+
+form label {
+  display: inline-block;
+  min-width: 150px;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-bottom: 5px;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #34405c;
+  border-radius: 7px;
+  background: #0f172a;
+  color: #e5e7eb;
+  outline: none;
+  font-size: 13px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #64748b;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #6d5aa8;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--bb-purple-light);
+  box-shadow: 0 0 0 3px rgb(124 58 237 / 16%);
+}
+
+/* Buttons */
+
+button {
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 9px 14px;
+  background: var(--bb-purple);
+  color: white;
+  font-size: 12px;
+  font-weight: 650;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+button:hover {
+  background: var(--bb-purple-light);
+  box-shadow: none;
+  transform: none;
+}
+
+button:active {
+  transform: none;
+}
+
+.submit-btn {
+  background: var(--bb-purple);
+}
+
+.submit-btn:hover {
+  background: var(--bb-purple-light);
+}
+
+/* Avoid styling every nested dashboard div as a card */
+
+.page > div {
+  transition: none;
+}
+
+/* Tables */
+
+.page table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bb-card);
+  border: 1px solid var(--bb-border);
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.page th {
+  background: #1c2740;
+  color: #c4b5fd;
+  padding: 11px;
+  text-align: left;
+  font-size: 11px;
+}
+
+.page td {
+  padding: 11px;
+  border-top: 1px solid var(--bb-border);
+  color: #cbd5e1;
+}
+
+.page ul {
+  padding-left: 20px;
+}
+
+.page li {
+  margin-bottom: 7px;
+}
+
+.page canvas {
+  max-width: 100%;
+}
+
+.recharts-default-tooltip {
+  background: #171f35 !important;
+  border: 1px solid var(--bb-border) !important;
+  border-radius: 8px !important;
+  color: #e5e7eb !important;
+}
+
+.recharts-legend-item-text {
+  color: #cbd5e1 !important;
+}
+
+/* Savings progress */
+
+progress {
+  width: 320px;
+  max-width: 100%;
+  height: 8px;
+  display: block;
+  margin: 10px 0 15px;
+  border: none;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+  background: #27314a;
+  border-radius: 20px;
+}
+
+progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  border-radius: 20px;
+}
+
+progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  border-radius: 20px;
+}
+
+/* Error messages */
+
+.page p[style*="red"] {
+  background: #321a29;
+  color: #fca5a5 !important;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border-left: 3px solid var(--bb-red);
+  margin: 14px 0;
+}
+
+/* =====================================================
+   DASHBOARD LAYOUT — SINGLE FIXED SIDEBAR
+   ===================================================== */
+
+.dashboard-layout {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bb-bg);
+}
+
+.dashboard-sidebar {
+  width: 228px;
+  min-width: 228px;
+  height: 100vh;
+  background: var(--bb-sidebar);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-right: 1px solid var(--bb-border);
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 15px;
+  border-bottom: 1px solid var(--bb-border);
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 10px;
+  background: var(--bb-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.sidebar-brand h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sidebar-brand span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 9px;
+}
+
+.sidebar-menu {
+  padding: 20px 8px;
+}
+
+.menu-title {
+  margin: 0 10px 12px;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.sidebar-item {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #a5b4cc;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 10px;
+  margin-bottom: 4px;
+  border-radius: 7px;
+  text-align: left;
+  font-size: 11px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-item span {
+  width: 17px;
+  flex: 0 0 17px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.sidebar-item:hover {
+  background: #171f35;
+  color: white;
+}
+
+.sidebar-item.active {
+  background: #281d50;
+  border-left: 3px solid var(--bb-purple-light);
+  color: #c4b5fd;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 10px 8px;
+  border-top: 1px solid var(--bb-border);
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 5px 12px;
+}
+
+.profile-avatar {
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+  border-radius: 50%;
+  background: var(--bb-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.sidebar-profile strong {
+  display: block;
+  color: #f1f5f9;
+  font-size: 11px;
+}
+
+.sidebar-profile span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 9px;
+}
+
+.sidebar-signout {
+  width: 100%;
+  border: 1px solid var(--bb-border);
+  background: transparent;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  text-align: left;
+}
+
+.sidebar-signout:hover {
+  background: #321a29;
+  color: #fca5a5;
+}
+
+/* Main content occupies only the area beside the sidebar */
+
+.dashboard-main {
+  margin-left: 228px;
+  width: calc(100% - 228px);
+  height: 100vh;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 22px;
+  background: var(--bb-bg);
+}
+
+.dashboard-main .page {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.dashboard-view {
+  min-height: 100%;
+  width: 100%;
+}
+
+.dashboard-view > .page {
+  display: block;
+}
+
+/* Selected page sections */
+
+.dashboard-view.overview .overview-section,
+.dashboard-view.budgets .budgets-section,
+.dashboard-view.savings .savings-section,
+.dashboard-view.income .income-section,
+.dashboard-view.expenses .expenses-section,
+.dashboard-view.analytics .analytics-section,
+.dashboard-view.reports .reports-section {
+  display: block;
+}
+
+/* =====================================================
+   LOGIN AND REGISTER — CENTERED AUTH CARDS
+   ===================================================== */
+
+.page:has(> h1):not(.dashboard-main .page) {
+  width: 100%;
+}
+
+/* Login/Register components use <div className="page">.
+   Keep auth forms compact and centered without affecting
+   the dashboard main page. */
+
+body:has(.page > input) {
+  background:
+    radial-gradient(ellipse at top, #17203a 0%, #080d1c 58%);
+}
+
+#root:has(.page > input) {
+  min-height: 100vh;
+}
+
+.app:has(.page > input) {
+  min-height: 100vh;
+  padding: 0;
+}
+
+.page:has(> input[type="text"][placeholder="Username"]) {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 30px;
+}
+
+.page:has(> input[type="text"][placeholder="Username"]) > h1 {
+  text-align: center;
+}
+
+.page:has(> input[type="text"][placeholder="Username"]) > input {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.page:has(> input[type="text"][placeholder="Username"]) > .submit-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.page:has(> input[type="text"][placeholder="Username"]) > p {
+  text-align: center;
+  color: var(--bb-muted);
+  margin-top: 18px;
+}
+
+.page:has(> input[type="text"][placeholder="Username"]) > p button {
+  background: transparent;
+  color: #c4b5fd;
+  padding: 4px 6px;
+}
+
+.page:has(> input[type="email"][placeholder="Email"]) {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 30px;
+}
+
+.page:has(> input[type="email"][placeholder="Email"]) > h1 {
+  text-align: center;
+}
+
+.page:has(> input[type="email"][placeholder="Email"]) > input {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.page:has(> input[type="email"][placeholder="Email"]) > .submit-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    width: 190px;
+    min-width: 190px;
+  }
+
+  .dashboard-main {
+    margin-left: 190px;
+    width: calc(100% - 190px);
+    padding: 15px;
+  }
+
+  .page {
+    padding: 18px;
+  }
+
+  .page > h1 {
+    font-size: 22px;
+  }
+
+  form {
+    width: 100%;
+    max-width: 100%;
+    padding: 16px;
+  }
+
+  form label {
+    display: block;
+    min-width: 0;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+  }
+
+  .page table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .recharts-responsive-container {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-sidebar {
+    width: 66px;
+    min-width: 66px;
+  }
+
+  .sidebar-brand {
+    justify-content: center;
+    padding: 12px 4px;
+  }
+
+  .sidebar-brand > div:last-child,
+  .menu-title,
+  .sidebar-item:not(:has(span)),
+  .sidebar-bottom .sidebar-profile > div:last-child,
+  .sidebar-signout {
+    font-size: 0;
+  }
+
+  .sidebar-menu {
+    padding: 12px 5px;
+  }
+
+  .sidebar-item {
+    justify-content: center;
+    padding: 10px 4px;
+  }
+
+  .sidebar-item span {
+    width: auto;
+    font-size: 14px;
+  }
+
+  .dashboard-main {
+    margin-left: 66px;
+    width: calc(100% - 66px);
+    padding: 12px;
+  }
+
+  .navbar {
+    padding: 12px;
+  }
+
+  .navbar h2 {
+    font-size: 16px;
+  }
+
+  .page {
+    padding: 12px;
+  }
+}
+
+/* Registration page — friend-style centered dark card */
+.auth-page {
+  min-height: calc(100vh - 66px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 28px 16px 40px;
+  background: var(--bb-bg, #080d1c);
+}
+
+.auth-card.register-card {
+  width: 100%;
+  max-width: 460px;
+  margin: 0;
+  padding: 22px 26px 20px;
+  background: var(--bb-card, #171f35);
+  border: 1px solid var(--bb-border, #27314a);
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgb(0 0 0 / 18%);
+}
+
+.auth-card.register-card h1 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 24px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.auth-subtitle {
+  margin: 6px 0 18px;
+  color: var(--bb-muted, #94a3b8);
+  font-size: 12px;
+  text-align: center;
+}
+
+.auth-card.register-card label {
+  display: block;
+  min-width: 0;
+  margin: 0 0 12px;
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.register-name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.auth-card.register-card input {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 38px;
+  margin-top: 5px;
+  padding: 9px 11px;
+  background: #0f172a;
+  border: 1px solid #273653;
+  border-radius: 6px;
+  color: #e5e7eb;
+  font-size: 12px;
+}
+
+.auth-card.register-card input::placeholder {
+  color: #64748b;
+}
+
+.auth-card.register-card input:focus {
+  outline: none;
+  border-color: var(--bb-purple-light, #8b5cf6);
+  box-shadow: 0 0 0 3px rgb(124 58 237 / 16%);
+}
+
+.auth-card.register-card .auth-submit-btn {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  margin: 7px 0 0;
+  border: 0;
+  border-radius: 7px;
+  background: var(--bb-purple, #7c3aed);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.auth-card.register-card .auth-submit-btn:hover {
+  background: var(--bb-purple-light, #8b5cf6);
+}
+
+.auth-card.register-card .auth-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.auth-card.register-card .auth-switch {
+  margin: 15px 0 0;
+  color: var(--bb-muted, #94a3b8);
+  font-size: 11px;
+  text-align: center;
+}
+
+.auth-card.register-card .auth-switch button {
+  padding: 2px 3px;
+  border: 0;
+  background: transparent;
+  color: #a78bfa;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+.auth-card.register-card .auth-switch button:hover {
+  color: #c4b5fd;
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 18px 12px 28px;
+  }
+
+  .auth-card.register-card {
+    padding: 20px 16px 18px;
+  }
+
+  .register-name-row {
+    gap: 9px;
+  }
+}
+/* Registration form text colors */
+.auth-card.register-card h1 {
+color: #f8fafc;
+}
+
+.auth-card.register-card label {
+color: #e2e8f0;
+}
+
+.auth-card.register-card input {
+background: #0f172a;
+color: #e2e8f0;
+border: 1px solid #273653;
+}
+
+.auth-card.register-card input::placeholder {
+color: #94a3b8;
+opacity: 1;
+}
+
+.auth-card.register-card input:focus {
+border-color: #8b5cf6;
+}
+
+.auth-card.register-card .auth-switch {
+color: #94a3b8;
+}
+
+.auth-card.register-card .auth-switch button {
+color: #a78bfa;
+}
